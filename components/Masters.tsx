@@ -20,6 +20,24 @@ const Masters: React.FC = () => {
   const [newTax, setNewTax] = useState<Partial<Tax>>({});
   const [newTable, setNewTable] = useState<Partial<Table>>({ status: 'Available' });
 
+  // Fix: Moved helper functions inside the component to correctly access 'remove' and 'tables' from useApp context
+  const removeWaiter = async (id: string) => {
+    if (confirm("Remove waiter?")) await remove("waiters", id);
+  };
+
+  const removeGroup = async (id: string) => {
+    if (confirm("Delete group? Items will remain but category will be removed.")) await remove("groups", id);
+  };
+
+  const removeTax = async (id: string) => {
+    if (confirm("Delete tax?")) await remove("taxes", id);
+  };
+
+  const removeTable = async (id: string) => {
+    const table = tables.find(t => t.id === id);
+    if (confirm(`Delete Table ${table?.number}?`)) await remove("tables", id);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -31,7 +49,10 @@ const Masters: React.FC = () => {
   };
 
   const handleSaveItem = async () => {
-    if (!newItem.name || !newItem.price) return;
+    if (!newItem.name || !newItem.price) {
+      alert("Please enter Name and Price");
+      return;
+    }
     const item: MenuItem = {
       id: editingId || `item-${Date.now()}`,
       name: newItem.name || '',
@@ -72,26 +93,9 @@ const Masters: React.FC = () => {
   };
 
   const removeItem = async (id: string) => { 
-    if (confirm("Are you sure?")) await remove("menu", id); 
+    if (confirm("Delete this item? This will remove it from the menu gallery.")) await remove("menu", id); 
   };
   
-  const removeWaiter = async (id: string) => {
-    if (confirm("Are you sure?")) await remove("waiters", id);
-  };
-
-  const removeGroup = async (id: string) => {
-    if (confirm("Delete group? Items will remain but category will be removed.")) await remove("groups", id);
-  };
-
-  const removeTax = async (id: string) => {
-    if (confirm("Delete tax?")) await remove("taxes", id);
-  };
-
-  const removeTable = async (id: string) => {
-    const table = tables.find(t => t.id === id);
-    if (confirm(`Delete Table ${table?.number}?`)) await remove("tables", id);
-  };
-
   const InputLabel = ({ label }: { label: string }) => (
     <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">{label}</label>
   );
@@ -111,35 +115,116 @@ const Masters: React.FC = () => {
           ))}
         </div>
 
-        <div className="p-8">
+        <div className="p-4 md:p-8">
           {activeTab === 'Items' && (
             <div className="space-y-8">
-              <div className={`grid grid-cols-1 md:grid-cols-12 gap-6 p-6 rounded-3xl border transition-all duration-300 ${editingId ? 'bg-indigo-900/10 border-indigo-500/50 shadow-[0_0_20px_rgba(99,102,241,0.1)]' : 'bg-[#0f172a] border-slate-800'}`}>
-                <div className="md:col-span-3 flex flex-col items-center gap-2">
-                  <InputLabel label="Food Image" />
-                  <div onClick={() => fileInputRef.current?.click()} className="relative w-full aspect-square bg-[#1e293b] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 cursor-pointer flex flex-col items-center justify-center overflow-hidden">
-                    {newItem.imageUrl ? <img src={newItem.imageUrl} className="w-full h-full object-cover" /> : <div className="text-center p-4"><i className="fa-solid fa-cloud-arrow-up text-2xl text-slate-600 mb-2"></i><p className="text-[9px] font-bold text-slate-500 uppercase">Upload</p></div>}
+              {/* Add/Edit Form */}
+              <div id="item-form" className={`grid grid-cols-1 md:grid-cols-12 gap-6 p-6 rounded-3xl border transition-all duration-300 ${editingId ? 'bg-indigo-900/10 border-indigo-500/50 shadow-lg' : 'bg-[#0f172a] border-slate-800'}`}>
+                <div className="md:col-span-3">
+                  <InputLabel label="Dish Photo" />
+                  <div onClick={() => fileInputRef.current?.click()} className="relative w-full aspect-video bg-[#1e293b] rounded-2xl border-2 border-dashed border-slate-700 hover:border-indigo-500 cursor-pointer flex flex-col items-center justify-center overflow-hidden transition-all group">
+                    {newItem.imageUrl ? (
+                      <img src={newItem.imageUrl} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center p-4">
+                        <i className="fa-solid fa-camera text-2xl text-slate-600 mb-2 group-hover:text-indigo-400 transition-colors"></i>
+                        <p className="text-[9px] font-black text-slate-500 uppercase">Tap to Upload</p>
+                      </div>
+                    )}
+                    {newItem.imageUrl && (
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                         <span className="text-[10px] font-black uppercase text-white">Change Photo</span>
+                      </div>
+                    )}
                   </div>
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
                 </div>
+                
                 <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="col-span-full lg:col-span-2"><InputLabel label="Item Name" /><input className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.name || ''} onChange={e => setNewItem({ ...newItem, name: e.target.value })} /></div>
-                  <div><InputLabel label="Price" /><input type="number" className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.price || ''} onChange={e => setNewItem({ ...newItem, price: Number(e.target.value) })} /></div>
-                  <div><InputLabel label="Group" /><select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.groupId} onChange={e => setNewItem({ ...newItem, groupId: e.target.value })}><option value="">-- Group --</option>{groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></div>
-                  <div><InputLabel label="Type" /><select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.foodType} onChange={e => setNewItem({ ...newItem, foodType: e.target.value as FoodType })}><option value={FoodType.VEG}>VEG</option><option value={FoodType.NON_VEG}>NON-VEG</option></select></div>
-                  <div><InputLabel label="Tax" /><select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.taxId} onChange={e => setNewItem({ ...newItem, taxId: e.target.value })}><option value="">-- GST --</option>{taxes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.rate}%)</option>)}</select></div>
-                  <div className="col-span-full flex gap-2"><button onClick={handleSaveItem} className="flex-1 h-[52px] bg-indigo-600 text-white font-black rounded-2xl uppercase text-[11px]">{editingId ? 'Update' : 'Save'}</button></div>
+                  <div className="col-span-full lg:col-span-2">
+                    <InputLabel label="Item Name" />
+                    <input className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold placeholder:text-slate-400" placeholder="e.g., Paneer Butter Masala" value={newItem.name || ''} onChange={e => setNewItem({ ...newItem, name: e.target.value })} />
+                  </div>
+                  <div>
+                    <InputLabel label="Price (₹)" />
+                    <input type="number" className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newItem.price || ''} onChange={e => setNewItem({ ...newItem, price: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <InputLabel label="Category Group" />
+                    <select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold appearance-none" value={newItem.groupId} onChange={e => setNewItem({ ...newItem, groupId: e.target.value })}>
+                      <option value="">-- Select --</option>
+                      {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <InputLabel label="Veg / Non-Veg" />
+                    <select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold appearance-none" value={newItem.foodType} onChange={e => setNewItem({ ...newItem, foodType: e.target.value as FoodType })}>
+                      <option value={FoodType.VEG}>Pure Veg</option>
+                      <option value={FoodType.NON_VEG}>Non-Veg</option>
+                    </select>
+                  </div>
+                  <div>
+                    <InputLabel label="GST Rate" />
+                    <select className="w-full p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold appearance-none" value={newItem.taxId} onChange={e => setNewItem({ ...newItem, taxId: e.target.value })}>
+                      <option value="">-- Select --</option>
+                      {taxes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.rate}%)</option>)}
+                    </select>
+                  </div>
+                  <div className="col-span-full flex gap-3 pt-2">
+                    <button onClick={handleSaveItem} className="flex-1 h-[52px] bg-indigo-600 text-white font-black rounded-2xl uppercase text-[11px] tracking-widest shadow-lg hover:bg-indigo-500 transition-all">
+                      {editingId ? 'Update Item' : 'Add to Menu'}
+                    </button>
+                    {editingId && (
+                      <button onClick={() => { setEditingId(null); setNewItem({ foodType: FoodType.VEG }); }} className="px-6 bg-slate-800 text-slate-400 font-black rounded-2xl uppercase text-[11px] tracking-widest border border-slate-700">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="overflow-x-auto rounded-3xl border border-slate-800">
-                <table className="w-full text-left">
-                  <thead className="bg-[#0f172a] text-[10px] font-black text-slate-500 uppercase"><tr><th className="p-5">Name</th><th className="p-5">Price</th><th className="p-5">Action</th></tr></thead>
-                  <tbody>
-                    {menu.map(item => (
-                      <tr key={item.id} className="border-b border-slate-800"><td className="p-5 font-bold uppercase text-xs">{item.name}</td><td className="p-5 text-indigo-400 font-black">₹{item.price}</td><td className="p-5 text-center"><div className="flex gap-2"><button onClick={() => { setNewItem(item); setEditingId(item.id); }} className="p-2 text-amber-500"><i className="fa-solid fa-pencil"></i></button><button onClick={() => removeItem(item.id)} className="p-2 text-rose-500"><i className="fa-solid fa-trash-can"></i></button></div></td></tr>
-                    ))}
-                  </tbody>
-                </table>
+
+              {/* Items Gallery Display */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {menu.length === 0 ? (
+                  <div className="col-span-full py-20 text-center opacity-20">
+                     <i className="fa-solid fa-utensils text-6xl mb-4"></i>
+                     <p className="font-black uppercase tracking-widest">No Items Added Yet</p>
+                  </div>
+                ) : (
+                  menu.map(item => (
+                    <div key={item.id} className="bg-[#0f172a] rounded-2xl border border-slate-800 overflow-hidden flex flex-col group relative">
+                      <div className="aspect-square bg-[#1e293b] relative overflow-hidden">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={item.name} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-700">
+                             <i className="fa-solid fa-image text-3xl"></i>
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2">
+                           <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border shadow-sm ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/50 text-rose-400 bg-rose-500/10'}`}>
+                              {item.foodType}
+                           </span>
+                        </div>
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
+                           <button onClick={() => { setNewItem(item); setEditingId(item.id); document.getElementById('item-form')?.scrollIntoView({ behavior: 'smooth' }); }} className="w-10 h-10 rounded-xl bg-white text-slate-900 flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                              <i className="fa-solid fa-pen-to-square"></i>
+                           </button>
+                           <button onClick={() => removeItem(item.id)} className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                              <i className="fa-solid fa-trash"></i>
+                           </button>
+                        </div>
+                      </div>
+                      <div className="p-3 flex-1 flex flex-col justify-between">
+                         <h4 className="text-white font-bold text-xs uppercase leading-tight line-clamp-2 mb-2">{item.name}</h4>
+                         <div className="flex justify-between items-center">
+                            <span className="text-indigo-400 font-black text-sm">₹{item.price}</span>
+                            <span className="text-[9px] font-black text-slate-500 uppercase">{groups.find(g => g.id === item.groupId)?.name || 'Misc'}</span>
+                         </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

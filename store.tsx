@@ -7,8 +7,7 @@ import {
   setDoc, 
   deleteDoc,
   onSnapshot,
-  collection,
-  DocumentData
+  collection
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { 
   getAuth, 
@@ -53,10 +52,11 @@ interface AppState {
   waiters: Waiter[];
   orders: Order[];
   settings: BusinessSettings;
+  setSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
   activeTable: string | null;
   setActiveTable: (id: string | null) => void;
   isLoading: boolean;
-  // Database Helpers
+  isSyncing: boolean;
   upsert: (col: string, item: any) => Promise<void>;
   remove: (col: string, id: string) => Promise<void>;
 }
@@ -66,6 +66,7 @@ const AppContext = createContext<AppState | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [tables, setTables] = useState<Table[]>([]);
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -74,10 +75,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>({
     name: 'Zesta Garden Restaurant',
-    address: '123 Food Street, MG Road, Pune',
+    address: '123 Food Street, Pune',
     phone: '+91 9876543210',
-    gstin: '27AAAZS0000A1Z5',
-    upiId: 'merchant@upi',
+    gstin: '',
     thankYouMessage: 'Visit Us Again!',
     printQrCode: true,
     printGstSummary: true
@@ -99,10 +99,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribes: (() => void)[] = [];
 
     const createListener = (colName: string, setter: (data: any[]) => void) => {
-      return onSnapshot(collection(db, colName), (snapshot) => {
-        const data = snapshot.docs.map(doc => doc.data());
-        setter(data as any[]);
-      });
+      return onSnapshot(collection(db, colName), 
+        (snapshot) => {
+          const data = snapshot.docs.map(doc => doc.data());
+          setter(data as any[]);
+        },
+        (error) => console.error(`Error in ${colName} listener:`, error)
+      );
     };
 
     unsubscribes.push(createListener("tables", setTables));
@@ -112,10 +115,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     unsubscribes.push(createListener("waiters", setWaiters));
     unsubscribes.push(createListener("orders", setOrders));
 
-    const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), (snapshot) => {
-      if (snapshot.exists()) setSettings(snapshot.data() as BusinessSettings);
-      setIsLoading(false);
-    });
+    const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), 
+      (snapshot) => {
+        if (snapshot.exists()) setSettings(snapshot.data() as BusinessSettings);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Error in settings listener:", error);
+        setIsLoading(false);
+      }
+    );
     unsubscribes.push(settingsUnsub);
 
     return () => unsubscribes.forEach(unsub => unsub());
@@ -123,21 +132,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const upsert = async (col: string, item: any) => {
     if (!user) return;
-    const docRef = col === "config" ? doc(db, col, "business_settings") : doc(db, col, item.id);
-    await setDoc(docRef, sanitizeData(item));
+    setIsSyncing(true);
+    try {
+      const docRef = col === "config" ? doc(db, col, "business_settings") : doc(db, col, item.id);
+      await setDoc(docRef, sanitizeData(item));
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const remove = async (col: string, id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, col, id));
+    setIsSyncing(true);
+    try {
+      await deleteDoc(doc(db, col, id));
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const logout = async () => await signOut(auth);
 
   return (
     <AppContext.Provider value={{
-      user, logout, tables, menu, groups, taxes, waiters, orders, settings,
-      activeTable, setActiveTable, isLoading, upsert, remove
+      user, logout, tables, menu, groups, taxes, waiters, orders, settings, setSettings,
+      activeTable, setActiveTable, isLoading, isSyncing, upsert, remove
     }}>
       {children}
     </AppContext.Provider>
