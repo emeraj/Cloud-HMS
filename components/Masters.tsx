@@ -126,11 +126,37 @@ const Masters: React.FC = () => {
     setNewTable({ status: 'Available' });
   };
 
-  const removeItem = (id: string) => { if (confirm("Delete this item?")) { setMenu(menu.filter(m => m.id !== id)); if (editingId === id) cancelEdit(); } };
-  const removeWaiter = (id: string) => setWaiters(waiters.filter(w => w.id !== id));
-  const removeGroup = (id: string) => setGroups(groups.filter(g => g.id !== id));
-  const removeTax = (id: string) => setTaxes(taxes.filter(t => t.id !== id));
-  const removeTable = (id: string) => setTables(tables.filter(t => t.id !== id));
+  const removeItem = (id: string) => { 
+    if (confirm("Are you sure you want to delete this item?")) { 
+      setMenu(menu.filter(m => m.id !== id)); 
+      if (editingId === id) cancelEdit(); 
+    } 
+  };
+  
+  const removeWaiter = (id: string) => {
+    if (confirm("Are you sure you want to delete this waiter?")) {
+      setWaiters(waiters.filter(w => w.id !== id));
+    }
+  };
+
+  const removeGroup = (id: string) => {
+    if (confirm("Are you sure you want to delete this group? Items associated with this group will remain, but the category will be removed.")) {
+      setGroups(groups.filter(g => g.id !== id));
+    }
+  };
+
+  const removeTax = (id: string) => {
+    if (confirm("Are you sure you want to delete this tax setting?")) {
+      setTaxes(taxes.filter(t => t.id !== id));
+    }
+  };
+
+  const removeTable = (id: string) => {
+    const table = tables.find(t => t.id === id);
+    if (confirm(`Are you sure you want to delete Table ${table?.number}?`)) {
+      setTables(tables.filter(t => t.id !== id));
+    }
+  };
 
   const InputLabel = ({ label }: { label: string }) => (
     <label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">{label}</label>

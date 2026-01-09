@@ -264,7 +264,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                       </button>
                     </div>
                     <button 
-                      onClick={() => updateQty(item.id, -item.quantity)}
+                      onClick={() => { if (confirm(`Remove ${item.name} from cart?`)) updateQty(item.id, -item.quantity); }}
                       className="text-slate-600 hover:text-rose-500 transition-colors p-1"
                     >
                        <i className="fa-solid fa-trash-can text-xs"></i>
