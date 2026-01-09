@@ -1,0 +1,204 @@
+
+import React, { useState } from 'react';
+import { AppProvider, useApp } from './store';
+import Dashboard from './components/Dashboard';
+import PosView from './components/PosView';
+import Masters from './components/Masters';
+import Reports from './components/Reports';
+import PrintSection from './components/PrintSection';
+import { Order } from './types';
+
+type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
+
+const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
+  const menuItems = [
+    { id: 'Dashboard', icon: 'fa-solid fa-chart-line', label: 'Dashboard' },
+    { id: 'Masters', icon: 'fa-solid fa-database', label: 'Master Data' },
+    { id: 'Reports', icon: 'fa-solid fa-file-invoice-dollar', label: 'Reports' },
+    { id: 'Settings', icon: 'fa-solid fa-gears', label: 'Settings' },
+  ];
+
+  return (
+    <div className="hidden md:flex flex-col w-64 bg-[#1e293b] border-r border-slate-700 h-full fixed top-0 left-0">
+      <div className="p-6 flex items-center gap-3">
+        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg shadow-indigo-900/50">
+          <i className="fa-solid fa-cloud"></i>
+        </div>
+        <div>
+          <h1 className="text-xl font-black text-white tracking-tight leading-none">Cloud-<span className="text-indigo-400">POS</span></h1>
+          <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest">Pro Edition</span>
+        </div>
+      </div>
+      
+      <nav className="flex-1 px-4 py-4 space-y-2">
+        {menuItems.map(item => (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id as View)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
+              activeView === item.id 
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/40' 
+                : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+            }`}
+          >
+            <i className={item.icon}></i>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      
+      <div className="p-4 border-t border-slate-700">
+        <div className="bg-[#0f172a] p-4 rounded-xl border border-slate-700">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Current Session</p>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
+               <i className="fa-solid fa-user text-xs"></i>
+            </div>
+            <span className="text-xs font-bold text-slate-300">ADMIN</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
+  return (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1e293b] border-t border-slate-700 flex justify-around p-2 z-50">
+      <button onClick={() => setView('Dashboard')} className={`flex flex-col items-center p-2 ${activeView === 'Dashboard' ? 'text-indigo-400' : 'text-slate-500'}`}>
+        <i className="fa-solid fa-house"></i>
+        <span className="text-[10px] mt-1">Home</span>
+      </button>
+      <button onClick={() => setView('Masters')} className={`flex flex-col items-center p-2 ${activeView === 'Masters' ? 'text-indigo-400' : 'text-slate-500'}`}>
+        <i className="fa-solid fa-database"></i>
+        <span className="text-[10px] mt-1">Masters</span>
+      </button>
+      <button onClick={() => setView('Reports')} className={`flex flex-col items-center p-2 ${activeView === 'Reports' ? 'text-indigo-400' : 'text-slate-500'}`}>
+        <i className="fa-solid fa-chart-pie"></i>
+        <span className="text-[10px] mt-1">Reports</span>
+      </button>
+      <button onClick={() => setView('Settings')} className={`flex flex-col items-center p-2 ${activeView === 'Settings' ? 'text-indigo-400' : 'text-slate-500'}`}>
+        <i className="fa-solid fa-gear"></i>
+        <span className="text-[10px] mt-1">Config</span>
+      </button>
+    </div>
+  );
+};
+
+const MainContent: React.FC = () => {
+  const { activeTable, setActiveTable, settings, setSettings } = useApp();
+  const [activeView, setView] = useState<View>('Dashboard');
+  const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT', order: Order } | null>(null);
+
+  const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
+    setPrintData({ type, order });
+    setTimeout(() => {
+      window.print();
+    }, 200);
+  };
+
+  if (activeTable) {
+    return (
+      <div className="bg-[#0f172a] min-h-screen text-slate-100">
+        <PosView 
+          onBack={() => setActiveTable(null)} 
+          onPrint={handlePrint}
+        />
+        <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen md:pl-64 pb-20 md:pb-0 bg-[#0f172a]">
+      <Sidebar activeView={activeView} setView={setView} />
+      
+      <header className="bg-[#1e293b] border-b border-slate-700 p-4 sticky top-0 z-10 flex justify-between items-center md:hidden">
+        <h1 className="text-lg font-black text-white tracking-tight">Cloud-<span className="text-indigo-400">POS</span></h1>
+        <div className="flex items-center gap-2">
+           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+           <span className="text-[10px] font-bold text-slate-400">ONLINE</span>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto p-4 md:p-8">
+        {activeView === 'Dashboard' && <Dashboard />}
+        {activeView === 'Masters' && <Masters />}
+        {activeView === 'Reports' && <Reports onPrint={handlePrint} />}
+        {activeView === 'Settings' && (
+          <div className="py-6">
+            <div className="bg-[#1e293b] rounded-2xl shadow-xl p-8 max-w-2xl mx-auto border border-slate-700">
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                 <i className="fa-solid fa-gears text-indigo-400"></i> Business Settings
+              </h2>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Hotel/Restaurant Name</label>
+                  <input 
+                    className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                    value={settings.name}
+                    onChange={e => setSettings({...settings, name: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Address</label>
+                  <textarea 
+                    className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                    rows={2}
+                    value={settings.address}
+                    onChange={e => setSettings({...settings, address: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Phone Number</label>
+                    <input 
+                      className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                      value={settings.phone}
+                      onChange={e => setSettings({...settings, phone: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">GSTIN</label>
+                    <input 
+                      className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                      value={settings.gstin}
+                      onChange={e => setSettings({...settings, gstin: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Footer Message</label>
+                  <input 
+                    className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                    value={settings.thankYouMessage}
+                    onChange={e => setSettings({...settings, thankYouMessage: e.target.value})}
+                  />
+                </div>
+                <button 
+                  onClick={() => alert('Settings Saved Successfully!')}
+                  className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold mt-4 shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-floppy-disk"></i> Save Configuration
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <MobileNav activeView={activeView} setView={setView} />
+      <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AppProvider>
+      <MainContent />
+    </AppProvider>
+  );
+};
+
+export default App;
