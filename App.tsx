@@ -92,9 +92,10 @@ const MainContent: React.FC = () => {
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
+    // Small delay to allow DOM to update for print preview
     setTimeout(() => {
       window.print();
-    }, 200);
+    }, 300);
   };
 
   if (activeTable) {
@@ -104,6 +105,7 @@ const MainContent: React.FC = () => {
           onBack={() => setActiveTable(null)} 
           onPrint={handlePrint}
         />
+        {/* Hidden on screen via index.html CSS, visible only during print */}
         <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
       </div>
     );
@@ -128,7 +130,7 @@ const MainContent: React.FC = () => {
         {activeView === 'Settings' && (
           <div className="py-6">
             <div className="bg-[#1e293b] rounded-2xl shadow-xl p-8 max-w-2xl mx-auto border border-slate-700">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-white">
                  <i className="fa-solid fa-gears text-indigo-400"></i> Business Settings
               </h2>
               <div className="space-y-6">
@@ -167,6 +169,40 @@ const MainContent: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                <div className="p-6 bg-[#0f172a] rounded-2xl border border-slate-700 space-y-4">
+                  <h3 className="text-sm font-black text-indigo-400 uppercase tracking-widest">Printer Options</h3>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">UPI ID (For Payment QR)</label>
+                    <input 
+                      className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
+                      value={settings.upiId || ''}
+                      placeholder="merchant@upi"
+                      onChange={e => setSettings({...settings, upiId: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.printQrCode}
+                        onChange={e => setSettings({...settings, printQrCode: e.target.checked})}
+                        className="w-5 h-5 accent-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Print UPI QR Code on Bill</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.printGstSummary}
+                        onChange={e => setSettings({...settings, printGstSummary: e.target.checked})}
+                        className="w-5 h-5 accent-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Print GST Summary Breakdown</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Footer Message</label>
                   <input 
@@ -188,6 +224,7 @@ const MainContent: React.FC = () => {
       </main>
 
       <MobileNav activeView={activeView} setView={setView} />
+      {/* Ensure PrintSection is rendered once at root-ish level */}
       <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
     </div>
   );

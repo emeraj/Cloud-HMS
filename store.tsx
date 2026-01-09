@@ -82,7 +82,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       address: '123 Food Street, MG Road, Pune',
       phone: '+91 9876543210',
       gstin: '27AAAZS0000A1Z5',
-      thankYouMessage: 'Visit Us Again!'
+      upiId: 'merchant@upi',
+      thankYouMessage: 'Visit Us Again!',
+      printQrCode: true,
+      printGstSummary: true
     };
   });
 

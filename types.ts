@@ -64,6 +64,9 @@ export interface BusinessSettings {
   address: string;
   phone: string;
   gstin: string;
+  upiId?: string; // For QR Payment
   fssai?: string;
   thankYouMessage: string;
+  printQrCode: boolean;
+  printGstSummary: boolean;
 }
