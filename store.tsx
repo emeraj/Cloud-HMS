@@ -5,11 +5,10 @@ import {
   getFirestore, 
   doc, 
   setDoc, 
-  getDoc, 
-  collection, 
-  getDocs,
-  query,
-  limit
+  deleteDoc,
+  onSnapshot,
+  collection,
+  DocumentData
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 import { 
   getAuth, 
@@ -17,9 +16,8 @@ import {
   User, 
   signOut 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { Table, MenuItem, Group, Tax, Waiter, Order, BusinessSettings, FoodType } from './types';
+import { Table, MenuItem, Group, Tax, Waiter, Order, BusinessSettings } from './types';
 
-// Firebase configuration provided by user
 const firebaseConfig = {
   apiKey: "AIzaSyC6FGS4MYHqYBGa_LGq9yfNrbzp-gKrhn8",
   authDomain: "cloud-hms-c9424.firebaseapp.com",
@@ -29,19 +27,13 @@ const firebaseConfig = {
   appId: "1:760530870938:web:3f981d2556f5167a357523"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
-/**
- * Firestore does not allow 'undefined' values in documents.
- * This helper recursively traverses an object and removes any keys that have undefined values.
- */
 const sanitizeData = (obj: any): any => {
-  if (Array.isArray(obj)) {
-    return obj.map(v => sanitizeData(v));
-  } else if (obj !== null && typeof obj === 'object') {
+  if (Array.isArray(obj)) return obj.map(v => sanitizeData(v));
+  if (obj !== null && typeof obj === 'object') {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
@@ -61,16 +53,12 @@ interface AppState {
   waiters: Waiter[];
   orders: Order[];
   settings: BusinessSettings;
-  setTables: React.Dispatch<React.SetStateAction<Table[]>>;
-  setMenu: React.Dispatch<React.SetStateAction<MenuItem[]>>;
-  setGroups: React.Dispatch<React.SetStateAction<Group[]>>;
-  setTaxes: React.Dispatch<React.SetStateAction<Tax[]>>;
-  setWaiters: React.Dispatch<React.SetStateAction<Waiter[]>>;
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  setSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
   activeTable: string | null;
   setActiveTable: (id: string | null) => void;
   isLoading: boolean;
+  // Database Helpers
+  upsert: (col: string, item: any) => Promise<void>;
+  remove: (col: string, id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -97,92 +85,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [activeTable, setActiveTable] = useState<string | null>(null);
 
-  // Auth State Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
-        setIsLoading(false);
-      }
+      if (!currentUser) setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  const logout = async () => {
-    await signOut(auth);
-  };
-
-  // Initial Data Load from Firestore (only when user is authenticated)
   useEffect(() => {
     if (!user) return;
 
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Load Settings
-        const settingsDoc = await getDoc(doc(db, "config", "business_settings"));
-        if (settingsDoc.exists()) {
-          setSettings(settingsDoc.data() as BusinessSettings);
-        }
+    const unsubscribes: (() => void)[] = [];
 
-        // Load Collections
-        const fetchCol = async (name: string) => {
-          const snap = await getDocs(collection(db, name));
-          return snap.docs.map(d => d.data());
-        };
-
-        const tData = await fetchCol("tables");
-        const mData = await fetchCol("menu");
-        const gData = await fetchCol("groups");
-        const txData = await fetchCol("taxes");
-        const wData = await fetchCol("waiters");
-        const oData = await fetchCol("orders");
-
-        if (tData.length) setTables(tData as Table[]);
-        else setTables(Array.from({ length: 12 }, (_, i) => ({ id: `T${i + 1}`, number: `${i + 1}`, status: 'Available' })));
-        
-        if (mData.length) setMenu(mData as MenuItem[]);
-        if (gData.length) setGroups(gData as Group[]);
-        if (txData.length) setTaxes(txData as Tax[]);
-        if (wData.length) setWaiters(wData as Waiter[]);
-        if (oData.length) setOrders(oData as Order[]);
-
-      } catch (error) {
-        console.error("Firestore loading error:", error);
-      } finally {
-        setIsLoading(false);
-      }
+    const createListener = (colName: string, setter: (data: any[]) => void) => {
+      return onSnapshot(collection(db, colName), (snapshot) => {
+        const data = snapshot.docs.map(doc => doc.data());
+        setter(data as any[]);
+      });
     };
-    loadData();
+
+    unsubscribes.push(createListener("tables", setTables));
+    unsubscribes.push(createListener("menu", setMenu));
+    unsubscribes.push(createListener("groups", setGroups));
+    unsubscribes.push(createListener("taxes", setTaxes));
+    unsubscribes.push(createListener("waiters", setWaiters));
+    unsubscribes.push(createListener("orders", setOrders));
+
+    const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), (snapshot) => {
+      if (snapshot.exists()) setSettings(snapshot.data() as BusinessSettings);
+      setIsLoading(false);
+    });
+    unsubscribes.push(settingsUnsub);
+
+    return () => unsubscribes.forEach(unsub => unsub());
   }, [user]);
 
-  // Sync Data to Firestore on changes
-  useEffect(() => {
-    if (!isLoading && user) {
-      setDoc(doc(db, "config", "business_settings"), sanitizeData(settings));
-    }
-  }, [settings, isLoading, user]);
-
-  const syncCollection = async (colName: string, data: any[]) => {
-    if (isLoading || !user) return;
-    for (const item of data) {
-      await setDoc(doc(db, colName, item.id), sanitizeData(item));
-    }
+  const upsert = async (col: string, item: any) => {
+    if (!user) return;
+    const docRef = col === "config" ? doc(db, col, "business_settings") : doc(db, col, item.id);
+    await setDoc(docRef, sanitizeData(item));
   };
 
-  useEffect(() => { syncCollection("tables", tables); }, [tables, isLoading, user]);
-  useEffect(() => { syncCollection("menu", menu); }, [menu, isLoading, user]);
-  useEffect(() => { syncCollection("groups", groups); }, [groups, isLoading, user]);
-  useEffect(() => { syncCollection("taxes", taxes); }, [taxes, isLoading, user]);
-  useEffect(() => { syncCollection("waiters", waiters); }, [waiters, isLoading, user]);
-  useEffect(() => { syncCollection("orders", orders); }, [orders, isLoading, user]);
+  const remove = async (col: string, id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, col, id));
+  };
+
+  const logout = async () => await signOut(auth);
 
   return (
     <AppContext.Provider value={{
-      user, logout,
-      tables, setTables, menu, setMenu, groups, setGroups,
-      taxes, setTaxes, waiters, setWaiters, orders, setOrders,
-      settings, setSettings, activeTable, setActiveTable, isLoading
+      user, logout, tables, menu, groups, taxes, waiters, orders, settings,
+      activeTable, setActiveTable, isLoading, upsert, remove
     }}>
       {children}
     </AppContext.Provider>
