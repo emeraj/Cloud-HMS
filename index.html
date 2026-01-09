@@ -8,39 +8,56 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    /* Default: Hide the print section on screen */
+    #print-section {
+      display: none;
+    }
+
     @page {
       size: 80mm auto;
       margin: 0mm;
     }
+
     @media print {
-      html, body {
-        width: 80mm;
-        margin: 0;
-        padding: 0;
-        background: white !important;
-        color: black !important;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      body * {
-        visibility: hidden;
-      }
-      #print-section, #print-section * {
-        visibility: visible;
-      }
-      #print-section {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 80mm;
-        padding: 4mm 5mm;
-        margin: 0;
-        background: white;
-      }
+      /* Hide all elements that have the no-print class */
       .no-print {
         display: none !important;
       }
+      
+      /* Reset layout for the root container to allow printing children */
+      #root {
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      /* Force show the print section */
+      #print-section {
+        display: block !important;
+        width: 80mm !important;
+        margin: 0 !important;
+        padding: 2mm !important;
+        background: white !important;
+        color: black !important;
+        position: static !important;
+        visibility: visible !important;
+      }
+
+      #print-section * {
+        visibility: visible !important;
+        color: black !important;
+      }
+
+      html, body {
+        background: white !important;
+        color: black !important;
+        width: 80mm;
+        margin: 0;
+        padding: 0;
+      }
     }
+
+    /* Screen-only custom scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -57,6 +74,13 @@
     }
     input, select, textarea {
       transition: all 0.2s ease-in-out;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
     }
   </style>
 <script type="importmap">

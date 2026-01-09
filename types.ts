@@ -28,6 +28,7 @@ export interface MenuItem {
   groupId: string;
   taxId: string;
   foodType: FoodType;
+  imageUrl?: string;
 }
 
 export interface OrderItem {
