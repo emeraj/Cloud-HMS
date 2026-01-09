@@ -9,13 +9,18 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @page {
-      size: auto;
+      size: 80mm auto;
       margin: 0mm;
     }
     @media print {
-      body {
+      html, body {
+        width: 80mm;
+        margin: 0;
+        padding: 0;
         background: white !important;
         color: black !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       body * {
         visibility: hidden;
@@ -27,8 +32,8 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 80mm; /* Standard 3-inch thermal width */
-        padding: 5mm;
+        width: 80mm;
+        padding: 4mm 5mm;
         margin: 0;
         background: white;
       }
@@ -50,7 +55,6 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #475569;
     }
-    /* Smooth transition for inputs */
     input, select, textarea {
       transition: all 0.2s ease-in-out;
     }

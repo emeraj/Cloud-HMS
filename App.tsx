@@ -95,7 +95,7 @@ const MainContent: React.FC = () => {
     // Small delay to allow DOM to update for print preview
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 400);
   };
 
   if (activeTable) {
@@ -105,7 +105,7 @@ const MainContent: React.FC = () => {
           onBack={() => setActiveTable(null)} 
           onPrint={handlePrint}
         />
-        {/* Hidden on screen via index.html CSS, visible only during print */}
+        {/* Print section is always rendered at root for consistent printing */}
         <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
       </div>
     );
@@ -171,13 +171,13 @@ const MainContent: React.FC = () => {
                 </div>
 
                 <div className="p-6 bg-[#0f172a] rounded-2xl border border-slate-700 space-y-4">
-                  <h3 className="text-sm font-black text-indigo-400 uppercase tracking-widest">Printer Options</h3>
+                  <h3 className="text-sm font-black text-indigo-400 uppercase tracking-widest">Printer & QR Settings</h3>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">UPI ID (For Payment QR)</label>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">UPI ID (For Scan-to-Pay)</label>
                     <input 
                       className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
                       value={settings.upiId || ''}
-                      placeholder="merchant@upi"
+                      placeholder="e.g., yourname@upi"
                       onChange={e => setSettings({...settings, upiId: e.target.value})}
                     />
                   </div>
@@ -198,13 +198,13 @@ const MainContent: React.FC = () => {
                         onChange={e => setSettings({...settings, printGstSummary: e.target.checked})}
                         className="w-5 h-5 accent-indigo-500"
                       />
-                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Print GST Summary Breakdown</span>
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">Print GST Breakdown Summary</span>
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Footer Message</label>
+                  <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Bill Footer Message</label>
                   <input 
                     className="w-full p-4 border-2 border-transparent rounded-xl bg-[#fdf9d1] text-slate-900 font-bold focus:border-indigo-500 outline-none transition-all"
                     value={settings.thankYouMessage}
@@ -212,8 +212,8 @@ const MainContent: React.FC = () => {
                   />
                 </div>
                 <button 
-                  onClick={() => alert('Settings Saved Successfully!')}
-                  className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold mt-4 shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 transition-all flex items-center justify-center gap-2"
+                  onClick={() => alert('Configuration Saved!')}
+                  className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black mt-4 shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-xs"
                 >
                   <i className="fa-solid fa-floppy-disk"></i> Save Configuration
                 </button>
@@ -224,7 +224,6 @@ const MainContent: React.FC = () => {
       </main>
 
       <MobileNav activeView={activeView} setView={setView} />
-      {/* Ensure PrintSection is rendered once at root-ish level */}
       <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
     </div>
   );
