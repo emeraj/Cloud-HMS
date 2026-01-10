@@ -48,6 +48,18 @@
     .text-main { color: var(--text-main); }
     .text-muted { color: var(--text-muted); }
 
+    /* Marquee Animation */
+    @keyframes marquee-ltr {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .animate-marquee-ltr {
+      display: inline-block;
+      white-space: nowrap;
+      animation: marquee-ltr 25s linear infinite;
+    }
+
     #print-section { display: none; }
 
     @page { size: 80mm auto; margin: 0mm; }
