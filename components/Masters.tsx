@@ -1,13 +1,13 @@
 
 import React, { useState, useRef } from 'react';
 import { useApp } from '../store';
-import { FoodType, MenuItem, Waiter, Group, Tax, Table } from '../types';
+import { FoodType, MenuItem, Captain, Group, Tax, Table } from '../types';
 
-type MasterTab = 'Items' | 'Waiters' | 'Groups' | 'Taxes' | 'Tables';
+type MasterTab = 'Items' | 'Captains' | 'Groups' | 'Taxes' | 'Tables';
 
 const Masters: React.FC = () => {
   const { 
-    menu, groups, waiters, taxes, tables, upsert, remove 
+    menu, groups, captains, taxes, tables, upsert, remove 
   } = useApp();
   
   const [activeTab, setActiveTab] = useState<MasterTab>('Items');
@@ -15,14 +15,13 @@ const Masters: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({ foodType: FoodType.VEG });
-  const [newWaiter, setNewWaiter] = useState<Partial<Waiter>>({});
+  const [newCaptain, setNewCaptain] = useState<Partial<Captain>>({});
   const [newGroup, setNewGroup] = useState<Partial<Group>>({});
   const [newTax, setNewTax] = useState<Partial<Tax>>({});
   const [newTable, setNewTable] = useState<Partial<Table>>({ status: 'Available' });
 
-  // Fix: Moved helper functions inside the component to correctly access 'remove' and 'tables' from useApp context
-  const removeWaiter = async (id: string) => {
-    if (confirm("Remove waiter?")) await remove("waiters", id);
+  const removeCaptain = async (id: string) => {
+    if (confirm("Remove Captain?")) await remove("waiters", id);
   };
 
   const removeGroup = async (id: string) => {
@@ -67,10 +66,10 @@ const Masters: React.FC = () => {
     setNewItem({ foodType: FoodType.VEG });
   };
 
-  const handleAddWaiter = async () => {
-    if (!newWaiter.name) return;
-    await upsert("waiters", { id: `w-${Date.now()}`, name: newWaiter.name, phone: newWaiter.phone });
-    setNewWaiter({});
+  const handleAddCaptain = async () => {
+    if (!newCaptain.name) return;
+    await upsert("waiters", { id: `w-${Date.now()}`, name: newCaptain.name, phone: newCaptain.phone });
+    setNewCaptain({});
   };
 
   const handleAddGroup = async () => {
@@ -104,7 +103,7 @@ const Masters: React.FC = () => {
     <div className="space-y-6">
       <div className="bg-[#1a2135] rounded-3xl shadow-2xl overflow-hidden border border-slate-800">
         <div className="flex border-b border-slate-800 bg-[#1e293b]/50 overflow-x-auto no-scrollbar">
-          {(['Items', 'Waiters', 'Groups', 'Taxes', 'Tables'] as MasterTab[]).map(tab => (
+          {(['Items', 'Captains', 'Groups', 'Taxes', 'Tables'] as MasterTab[]).map(tab => (
             <button
               key={tab}
               onClick={() => { setActiveTab(tab); setEditingId(null); setNewItem({ foodType: FoodType.VEG }); }}
@@ -229,18 +228,18 @@ const Masters: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'Waiters' && (
+          {activeTab === 'Captains' && (
             <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#0f172a] p-6 rounded-3xl border border-slate-800">
-                <input placeholder="Name" className="p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newWaiter.name || ''} onChange={e => setNewWaiter({ ...newWaiter, name: e.target.value })} />
-                <input placeholder="Phone" className="p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newWaiter.phone || ''} onChange={e => setNewWaiter({ ...newWaiter, phone: e.target.value })} />
-                <button onClick={handleAddWaiter} className="h-[52px] bg-indigo-600 text-white font-black rounded-2xl uppercase text-[11px]">Save Waiter</button>
+                <input placeholder="Captain Name" className="p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newCaptain.name || ''} onChange={e => setNewCaptain({ ...newCaptain, name: e.target.value })} />
+                <input placeholder="Phone" className="p-3.5 rounded-2xl bg-[#fdf9d1] text-slate-800 font-bold" value={newCaptain.phone || ''} onChange={e => setNewCaptain({ ...newCaptain, phone: e.target.value })} />
+                <button onClick={handleAddCaptain} className="h-[52px] bg-indigo-600 text-white font-black rounded-2xl uppercase text-[11px]">Save Captain</button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {waiters.map(waiter => (
-                  <div key={waiter.id} className="bg-[#0f172a] p-5 rounded-3xl border border-slate-800 flex justify-between items-center">
-                    <div><h4 className="text-white font-black text-sm uppercase">{waiter.name}</h4><p className="text-slate-500 text-xs font-bold">{waiter.phone}</p></div>
-                    <button onClick={() => removeWaiter(waiter.id)} className="text-rose-500"><i className="fa-solid fa-trash-can"></i></button>
+                {captains.map(captain => (
+                  <div key={captain.id} className="bg-[#0f172a] p-5 rounded-3xl border border-slate-800 flex justify-between items-center">
+                    <div><h4 className="text-white font-black text-sm uppercase">{captain.name}</h4><p className="text-slate-500 text-xs font-bold">{captain.phone}</p></div>
+                    <button onClick={() => removeCaptain(captain.id)} className="text-rose-500"><i className="fa-solid fa-trash-can"></i></button>
                   </div>
                 ))}
               </div>

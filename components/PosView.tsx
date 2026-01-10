@@ -10,8 +10,8 @@ interface PosViewProps {
 
 const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const { 
-    activeTable, tables, menu, groups, waiters, 
-    orders, taxes, upsert 
+    activeTable, tables, menu, groups, captains, 
+    orders, taxes, upsert, user 
   } = useApp();
   
   const currentTable = tables.find(t => t.id === activeTable);
@@ -19,16 +19,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedWaiter, setSelectedWaiter] = useState(existingOrder?.waiterId || (waiters[0]?.id || ''));
+  const [selectedCaptain, setSelectedCaptain] = useState(existingOrder?.captainId || (captains[0]?.id || ''));
   const [cartItems, setCartItems] = useState<OrderItem[]>(existingOrder?.items || []);
+  
+  // New billing fields
+  const [customerName, setCustomerName] = useState(existingOrder?.customerName || '');
+  const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card'>(existingOrder?.paymentMode || 'Cash');
 
-  // Update local cart if external cloud changes happen (from other devices)
   useEffect(() => {
     if (existingOrder) {
       setCartItems(existingOrder.items);
-      setSelectedWaiter(existingOrder.waiterId);
+      setSelectedCaptain(existingOrder.captainId);
+      setCustomerName(existingOrder.customerName || '');
+      setPaymentMode(existingOrder.paymentMode || 'Cash');
     }
-  }, [existingOrder?.items, existingOrder?.waiterId]);
+  }, [existingOrder?.id]);
 
   const filteredMenu = useMemo(() => {
     return menu.filter(item => {
@@ -44,11 +49,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
-  // Unified sync function to push cart state to Firestore
-  const syncCartToCloud = useCallback(async (updatedItems: OrderItem[], waiterId: string, currentStatus: 'Pending' | 'Billed' | 'Settled' = 'Pending') => {
+  const syncCartToCloud = useCallback(async (
+    updatedItems: OrderItem[], 
+    captainId: string, 
+    custName: string, 
+    payMode: 'Cash' | 'UPI' | 'Card',
+    currentStatus: 'Pending' | 'Billed' | 'Settled' = 'Pending'
+  ) => {
     if (!activeTable || !currentTable) return;
 
-    // Recalculate totals for the cloud sync
     const subTotal = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
     const totalAmount = subTotal + taxAmount;
@@ -57,20 +66,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const newOrder: Order = {
       id: orderId,
       tableId: activeTable,
-      waiterId: waiterId,
+      captainId: captainId,
       items: updatedItems,
       status: currentStatus,
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       subTotal,
       taxAmount,
       totalAmount,
-      kotCount: existingOrder?.kotCount || 0
+      kotCount: existingOrder?.kotCount || 0,
+      customerName: custName,
+      paymentMode: payMode,
+      cashierName: user?.displayName || user?.email?.split('@')[0] || 'Admin'
     };
 
-    // Push Order to Cloud
     await upsert("orders", newOrder);
     
-    // Update Table to point to this order
     if (currentTable.currentOrderId !== orderId || currentTable.status === 'Available') {
       await upsert("tables", { 
         ...currentTable, 
@@ -78,12 +88,11 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         currentOrderId: orderId 
       });
     }
-  }, [activeTable, currentTable, existingOrder, upsert]);
+  }, [activeTable, currentTable, existingOrder, upsert, user]);
 
   const addToCart = async (item: MenuItem) => {
     let updatedItems: OrderItem[] = [];
     const existing = cartItems.find(i => i.menuItemId === item.id);
-    
     if (existing) {
       updatedItems = cartItems.map(i => i.menuItemId === item.id ? { ...i, quantity: i.quantity + 1 } : i);
     } else {
@@ -97,10 +106,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         taxRate
       }];
     }
-    
     setCartItems(updatedItems);
-    // INSTANT SYNC: Push to cloud immediately so PC sees it
-    syncCartToCloud(updatedItems, selectedWaiter);
+    syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
 
   const updateQty = (id: string, delta: number) => {
@@ -111,29 +118,29 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       }
       return item;
     }).filter(i => i.quantity > 0);
-    
     setCartItems(updatedItems);
-    syncCartToCloud(updatedItems, selectedWaiter);
+    syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
 
   const handleKOT = async () => {
-    // Increment KOT count on print
     if (existingOrder) {
       const updatedOrder = { ...existingOrder, kotCount: existingOrder.kotCount + 1 };
       await upsert("orders", updatedOrder);
       onPrint('KOT', updatedOrder);
     } else {
-      // If order hasn't even been synced yet (unlikely with auto-sync)
       const orderId = `ORD-${Date.now()}`;
       const newOrder: Order = {
         id: orderId,
         tableId: activeTable!,
-        waiterId: selectedWaiter,
+        captainId: selectedCaptain,
         items: cartItems,
         status: 'Pending',
         timestamp: new Date().toISOString(),
         ...totals,
-        kotCount: 1
+        kotCount: 1,
+        customerName,
+        paymentMode,
+        cashierName: user?.displayName || 'Admin'
       };
       await upsert("orders", newOrder);
       await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
@@ -146,12 +153,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const newOrder: Order = {
       id: orderId,
       tableId: activeTable!,
-      waiterId: selectedWaiter,
+      captainId: selectedCaptain,
       items: cartItems,
       status: 'Billed',
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       ...totals,
-      kotCount: existingOrder?.kotCount || 0
+      kotCount: existingOrder?.kotCount || 0,
+      customerName,
+      paymentMode,
+      cashierName: user?.displayName || 'Admin'
     };
     await upsert("orders", newOrder);
     await upsert("tables", { ...currentTable!, status: 'Billing', currentOrderId: orderId });
@@ -160,7 +170,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const handleSettle = async () => {
     if (!existingOrder || !currentTable) return;
-    await upsert("orders", { ...existingOrder, status: 'Settled' });
+    await upsert("orders", { ...existingOrder, status: 'Settled', paymentMode, customerName });
     await upsert("tables", { ...currentTable, status: 'Available', currentOrderId: undefined });
     onBack();
   };
@@ -239,28 +249,45 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      {/* Right Sidebar: Order Summary */}
       <div className="w-full md:w-[350px] bg-[#1a2135] flex flex-col border-l border-slate-800 overflow-hidden shadow-2xl">
-        <div className="p-4 border-b border-slate-800 bg-[#1e293b]/30">
-          <div className="flex justify-between items-center mb-3">
+        <div className="p-4 border-b border-slate-800 bg-[#1e293b]/30 space-y-3">
+          <div className="flex justify-between items-center">
             <h2 className="text-[11px] font-black text-white uppercase tracking-widest">Live Order</h2>
             <span className="bg-indigo-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-lg">
               Table {currentTable?.number}
             </span>
           </div>
-          <div className="relative">
-            <select 
-              className="w-full px-4 py-3 bg-[#fdf9d1] rounded-xl text-xs font-bold text-slate-900 border-none outline-none appearance-none cursor-pointer" 
-              value={selectedWaiter} 
-              onChange={(e) => {
-                setSelectedWaiter(e.target.value);
-                syncCartToCloud(cartItems, e.target.value);
-              }}
-            >
-              <option value="">Choose Waiter</option>
-              {waiters.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-            <i className="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[10px]"></i>
+          
+          <div className="grid grid-cols-1 gap-2">
+            <div className="relative">
+              <select 
+                className="w-full pl-8 pr-4 py-2.5 bg-[#fdf9d1] rounded-xl text-xs font-bold text-slate-900 border-none outline-none appearance-none cursor-pointer" 
+                value={selectedCaptain} 
+                onChange={(e) => {
+                  setSelectedCaptain(e.target.value);
+                  syncCartToCloud(cartItems, e.target.value, customerName, paymentMode);
+                }}
+              >
+                <option value="">Captain</option>
+                {captains.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+              <i className="fa-solid fa-user-tie absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+              <i className="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[8px]"></i>
+            </div>
+            
+            <div className="relative">
+              <input 
+                type="text"
+                placeholder="Customer Name"
+                className="w-full pl-8 pr-4 py-2.5 bg-[#fdf9d1] rounded-xl text-xs font-bold text-slate-900 border-none outline-none placeholder:text-slate-400"
+                value={customerName}
+                onChange={(e) => {
+                  setCustomerName(e.target.value);
+                  syncCartToCloud(cartItems, selectedCaptain, e.target.value, paymentMode);
+                }}
+              />
+              <i className="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+            </div>
           </div>
         </div>
 
@@ -295,6 +322,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
 
         <div className="p-4 bg-[#0f172a] border-t border-slate-800">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+             {(['Cash', 'UPI', 'Card'] as const).map(mode => (
+               <button 
+                key={mode} 
+                onClick={() => {
+                  setPaymentMode(mode);
+                  syncCartToCloud(cartItems, selectedCaptain, customerName, mode);
+                }}
+                className={`py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${paymentMode === mode ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg' : 'bg-[#1e293b] border-slate-700 text-slate-500'}`}
+               >
+                 {mode}
+               </button>
+             ))}
+          </div>
+
           <div className="space-y-1.5 mb-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">
             <div className="flex justify-between"><span>Base Amount</span><span className="text-slate-200">₹{totals.subTotal.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total Taxes</span><span className="text-slate-200">₹{totals.taxAmount.toFixed(2)}</span></div>

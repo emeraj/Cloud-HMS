@@ -8,10 +8,9 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
-  const { orders, waiters, setActiveTable, tables, upsert, remove } = useApp();
-  const [reportType, setReportType] = useState<'DayBook' | 'WaiterWise' | 'ItemSummary'>('DayBook');
+  const { orders, captains, setActiveTable, tables, upsert, remove } = useApp();
+  const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
 
-  // Include both Billed and Settled orders to ensure live visibility as soon as a bill is generated
   const completedOrders = useMemo(() => 
     orders.filter(o => o.status === 'Settled' || o.status === 'Billed')
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), 
@@ -20,13 +19,13 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
 
   const totalSales = useMemo(() => completedOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [completedOrders]);
 
-  const waiterStats = useMemo(() => {
-    return waiters.map(w => {
-      const waiterOrders = completedOrders.filter(o => o.waiterId === w.id);
-      const sales = waiterOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-      return { name: w.name, count: waiterOrders.length, sales };
+  const captainStats = useMemo(() => {
+    return captains.map(w => {
+      const captainOrders = completedOrders.filter(o => o.captainId === w.id);
+      const sales = captainOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+      return { name: w.name, count: captainOrders.length, sales };
     }).sort((a, b) => b.sales - a.sales);
-  }, [waiters, completedOrders]);
+  }, [captains, completedOrders]);
 
   const itemSummary = useMemo(() => {
     const summary: Record<string, { name: string, quantity: number, revenue: number }> = {};
@@ -63,19 +62,18 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
 
   return (
     <div className="space-y-4">
-      {/* Summary Cards - Normal font and tighter padding */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Sales (Billed+Settled)</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Sales Today</p>
           <p className="text-lg font-bold text-emerald-400">₹{totalSales.toFixed(2)}</p>
         </div>
         <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Completed Orders</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Orders Processed</p>
           <p className="text-lg font-bold text-white">{completedOrders.length}</p>
         </div>
         <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Unique Items Sold</p>
-          <p className="text-lg font-bold text-indigo-400">{itemSummary.length}</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Best Seller Revenue</p>
+          <p className="text-lg font-bold text-indigo-400">₹{itemSummary[0]?.revenue.toFixed(2) || '0.00'}</p>
         </div>
       </div>
 
@@ -85,19 +83,19 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
             onClick={() => setReportType('DayBook')} 
             className={`px-5 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${reportType === 'DayBook' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
           >
-            Order Log
+            DayBook (Orders)
           </button>
           <button 
             onClick={() => setReportType('ItemSummary')} 
             className={`px-5 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${reportType === 'ItemSummary' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
           >
-            Item Summary
+            Sales by Item
           </button>
           <button 
-            onClick={() => setReportType('WaiterWise')} 
-            className={`px-5 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${reportType === 'WaiterWise' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+            onClick={() => setReportType('CaptainWise')} 
+            className={`px-5 py-3 text-[11px] font-bold uppercase tracking-wider transition-all border-b-2 whitespace-nowrap ${reportType === 'CaptainWise' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
           >
-            Waiters
+            Captains Performance
           </button>
         </div>
 
@@ -105,41 +103,51 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
           {reportType === 'DayBook' && (
             <div className="overflow-x-auto rounded-lg border border-slate-800/50">
               <table className="w-full text-left">
-                <thead className="bg-[#0f172a] text-[10px] font-bold text-slate-500 uppercase">
+                <thead className="bg-[#0f172a] text-[9px] font-black text-slate-500 uppercase tracking-tighter">
                   <tr>
-                    <th className="p-2.5">ID/Time</th>
-                    <th className="p-2.5">Table</th>
-                    <th className="p-2.5">Status</th>
-                    <th className="p-2.5 text-right">Amount</th>
-                    <th className="p-2.5 text-center">Actions</th>
+                    <th className="p-3">Bill #</th>
+                    <th className="p-3">Time</th>
+                    <th className="p-3">Cashier</th>
+                    <th className="p-3">Customer</th>
+                    <th className="p-3">Mode</th>
+                    <th className="p-3 text-right">Amount</th>
+                    <th className="p-3 text-center">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#1e293b]/10 text-xs">
+                <tbody className="bg-[#1e293b]/10 text-[11px]">
                   {completedOrders.length === 0 ? (
-                    <tr><td colSpan={5} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No completed orders today</td></tr>
+                    <tr><td colSpan={7} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No transaction data found</td></tr>
                   ) : (
                     completedOrders.map(order => (
                       <tr key={order.id} className="border-b border-slate-800/50 hover:bg-slate-700/20 transition-colors">
-                        <td className="p-2.5">
-                          <div className="font-mono font-bold text-indigo-400">#{order.id.slice(-6).toUpperCase()}</div>
-                          <div className="text-[9px] text-slate-500">{new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <td className="p-3">
+                          <div className="font-mono font-black text-indigo-400">#{order.id.slice(-6).toUpperCase()}</div>
+                          <div className={`text-[8px] font-bold uppercase mt-0.5 ${order.status === 'Settled' ? 'text-emerald-500' : 'text-orange-500'}`}>{order.status}</div>
                         </td>
-                        <td className="p-2.5 text-slate-300 font-bold">T-{tables.find(t => t.id === order.tableId)?.number}</td>
-                        <td className="p-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase border ${order.status === 'Settled' ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/5' : 'border-orange-500/30 text-orange-500 bg-orange-500/5'}`}>
-                            {order.status}
+                        <td className="p-3 text-slate-400 font-medium">
+                          {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                        </td>
+                        <td className="p-3 text-slate-300 font-bold uppercase">{order.cashierName || 'Admin'}</td>
+                        <td className="p-3 text-slate-300 font-bold uppercase truncate max-w-[120px]">{order.customerName || 'Walk-in'}</td>
+                        <td className="p-3">
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                            order.paymentMode === 'UPI' ? 'bg-indigo-500/10 text-indigo-400' : 
+                            order.paymentMode === 'Card' ? 'bg-amber-500/10 text-amber-400' : 
+                            'bg-emerald-500/10 text-emerald-400'
+                          }`}>
+                            {order.paymentMode || 'Cash'}
                           </span>
                         </td>
-                        <td className="p-2.5 font-bold text-right text-slate-200">₹{order.totalAmount.toFixed(2)}</td>
-                        <td className="p-2.5">
-                          <div className="flex justify-center gap-1.5">
-                            <button onClick={() => onPrint?.('BILL', order)} className="w-7 h-7 rounded bg-slate-800 text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-700">
+                        <td className="p-3 font-black text-right text-white">₹{order.totalAmount.toFixed(2)}</td>
+                        <td className="p-3">
+                          <div className="flex justify-center gap-1">
+                            <button onClick={() => onPrint?.('BILL', order)} className="w-8 h-8 rounded-lg bg-[#0f172a] text-slate-400 hover:text-white transition-all flex items-center justify-center border border-slate-700 shadow-sm" title="Print Bill">
                               <i className="fa-solid fa-print text-[10px]"></i>
                             </button>
-                            <button onClick={() => handleEditOrder(order)} className="w-7 h-7 rounded bg-slate-800 text-amber-500 hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center border border-slate-700">
-                              <i className="fa-solid fa-pen-to-square text-[10px]"></i>
+                            <button onClick={() => handleEditOrder(order)} className="w-8 h-8 rounded-lg bg-[#0f172a] text-amber-500 hover:bg-amber-500 hover:text-white transition-all flex items-center justify-center border border-slate-700 shadow-sm" title="Re-open Order">
+                              <i className="fa-solid fa-rotate-left text-[10px]"></i>
                             </button>
-                            <button onClick={() => handleDeleteOrder(order.id)} className="w-7 h-7 rounded bg-slate-800 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-slate-700">
+                            <button onClick={() => handleDeleteOrder(order.id)} className="w-8 h-8 rounded-lg bg-[#0f172a] text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex items-center justify-center border border-slate-700 shadow-sm" title="Delete Record">
                               <i className="fa-solid fa-trash-can text-[10px]"></i>
                             </button>
                           </div>
@@ -157,20 +165,20 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
               <table className="w-full text-left">
                 <thead className="bg-[#0f172a] text-[10px] font-bold text-slate-500 uppercase">
                   <tr>
-                    <th className="p-2.5">Dish Name</th>
-                    <th className="p-2.5 text-center">Qty</th>
-                    <th className="p-2.5 text-right">Revenue</th>
+                    <th className="p-3">Dish Name</th>
+                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-right">Revenue</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#1e293b]/10 text-xs">
+                <tbody className="bg-[#1e293b]/10 text-[11px]">
                   {itemSummary.length === 0 ? (
-                    <tr><td colSpan={3} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No items sold yet</td></tr>
+                    <tr><td colSpan={3} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No sales records yet</td></tr>
                   ) : (
                     itemSummary.map((item, idx) => (
                       <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-700/20">
-                        <td className="p-2.5 text-slate-300 font-bold uppercase">{item.name}</td>
-                        <td className="p-2.5 text-center text-indigo-400 font-bold">{item.quantity}</td>
-                        <td className="p-2.5 text-right text-emerald-400 font-bold">₹{item.revenue.toFixed(2)}</td>
+                        <td className="p-3 text-slate-300 font-bold uppercase">{item.name}</td>
+                        <td className="p-3 text-center text-indigo-400 font-black">{item.quantity}</td>
+                        <td className="p-3 text-right text-emerald-400 font-black">₹{item.revenue.toFixed(2)}</td>
                       </tr>
                     ))
                   )}
@@ -179,20 +187,20 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
             </div>
           )}
 
-          {reportType === 'WaiterWise' && (
+          {reportType === 'CaptainWise' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {waiterStats.length === 0 ? (
-                <div className="col-span-full p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No waiter stats available</div>
+              {captainStats.length === 0 ? (
+                <div className="col-span-full p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No staff performance data</div>
               ) : (
-                waiterStats.map((stat, idx) => (
+                captainStats.map((stat, idx) => (
                   <div key={idx} className="bg-[#0f172a] p-3 rounded-xl border border-slate-800 flex justify-between items-center hover:border-indigo-500/50 transition-all group">
                     <div>
                       <h4 className="text-xs font-bold text-white uppercase group-hover:text-indigo-400 transition-colors">{stat.name}</h4>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase">{stat.count} Orders</p>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase">{stat.count} Orders Served</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-emerald-400">₹{stat.sales.toFixed(2)}</p>
-                      <p className="text-[9px] text-slate-600 font-bold uppercase tracking-tighter">Total Generated</p>
+                      <p className="text-[9px] text-slate-600 font-bold uppercase tracking-tighter">Sales Generated</p>
                     </div>
                   </div>
                 ))

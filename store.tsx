@@ -15,7 +15,7 @@ import {
   User, 
   signOut 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { Table, MenuItem, Group, Tax, Waiter, Order, BusinessSettings } from './types';
+import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings } from './types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC6FGS4MYHqYBGa_LGq9yfNrbzp-gKrhn8",
@@ -49,7 +49,7 @@ interface AppState {
   menu: MenuItem[];
   groups: Group[];
   taxes: Tax[];
-  waiters: Waiter[];
+  captains: Captain[];
   orders: Order[];
   settings: BusinessSettings;
   setSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
@@ -71,7 +71,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [taxes, setTaxes] = useState<Tax[]>([]);
-  const [waiters, setWaiters] = useState<Waiter[]>([]);
+  const [captains, setCaptains] = useState<Captain[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>({
     name: 'Zesta Garden Restaurant',
@@ -112,7 +112,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     unsubscribes.push(createListener("menu", setMenu));
     unsubscribes.push(createListener("groups", setGroups));
     unsubscribes.push(createListener("taxes", setTaxes));
-    unsubscribes.push(createListener("waiters", setWaiters));
+    unsubscribes.push(createListener("waiters", setCaptains)); // Use existing collection but new setter
     unsubscribes.push(createListener("orders", setOrders));
 
     const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), 
@@ -155,7 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, logout, tables, menu, groups, taxes, waiters, orders, settings, setSettings,
+      user, logout, tables, menu, groups, taxes, captains, orders, settings, setSettings,
       activeTable, setActiveTable, isLoading, isSyncing, upsert, remove
     }}>
       {children}

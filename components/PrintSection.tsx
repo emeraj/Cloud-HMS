@@ -9,11 +9,11 @@ interface PrintSectionProps {
 }
 
 const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
-  const { settings, tables, waiters } = useApp();
+  const { settings, tables, captains } = useApp();
   if (!order) return null;
 
   const table = tables.find(t => t.id === order.tableId);
-  const waiter = waiters.find(w => w.id === order.waiterId);
+  const captain = captains.find(w => w.id === order.captainId);
   const formattedDate = new Date(order.timestamp).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: '2-digit',
@@ -21,7 +21,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
   });
   const formattedTime = new Date(order.timestamp).toLocaleTimeString([], { 
     hour: '2-digit', 
-    minute: '2-digit' 
+    minute: '2-digit',
+    hour12: true
   });
 
   const upiUrl = settings.upiId 
@@ -32,7 +33,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
     ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`
     : '';
 
-  // Calculate GST summary (SGST/CGST breakdown)
   const gstBreakdown = order.items.reduce((acc: any, item) => {
     const rate = item.taxRate;
     const taxable = (item.price * item.quantity);
@@ -52,36 +52,38 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
     <div id="print-section" className="text-black bg-white font-mono text-[10px] uppercase leading-tight print-view selection:bg-transparent">
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
-          {/* Header */}
           <div className="text-center mb-1">
             <h1 className="text-[13px] font-black tracking-tight mb-0.5">{settings.name}</h1>
             <p className="text-[8px] whitespace-pre-line leading-none px-2">{settings.address}</p>
-            {settings.gstin && <p className="text-[8px] mt-1 font-bold">GSTIN: {settings.gstin}</p>}
+            {settings.fssai && <p className="text-[8px] font-bold mt-0.5">FSSAI: {settings.fssai}</p>}
+            {settings.gstin && <p className="text-[8px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
           <div className="border-t border-black border-dashed my-1"></div>
           <div className="text-center font-black text-[11px] py-0.5">TAX INVOICE</div>
           <div className="border-t border-black border-dashed my-1"></div>
 
-          {/* Info Section */}
           <div className="space-y-0.5 mb-1.5 px-0.5">
             <div className="flex justify-between">
               <span>Bill No: INV-{order.id.slice(-6).toUpperCase()}</span>
               <span>Date: {formattedDate}</span>
             </div>
             <div className="flex justify-between">
-              <span>Customer: Walk-in Customer</span>
-              <span></span>
+              <span>Cust: {order.customerName || 'Walk-in'}</span>
+              <span>Time: {formattedTime}</span>
             </div>
             <div className="flex justify-between">
               <span>Table: {table?.number || 'N/A'}</span>
-              <span>Waiter: {waiter?.name || 'N/A'}</span>
+              <span>Capt: {captain?.name || 'N/A'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Cashier: {order.cashierName || 'Admin'}</span>
+              <span>Mode: {order.paymentMode || 'Cash'}</span>
             </div>
           </div>
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Items Table */}
           <table className="w-full text-left mb-1.5">
             <thead>
               <tr className="border-b border-black border-dashed">
@@ -105,7 +107,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Totals */}
           <div className="space-y-0.5 mb-2 px-1 text-[9px]">
             <div className="flex justify-between">
               <span>Subtotal:</span>
@@ -122,7 +123,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
             <span className="text-[14px] font-black">₹{order.totalAmount.toFixed(2)}</span>
           </div>
 
-          {/* GST Summary */}
           {settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
             <div className="mb-4">
               <div className="text-center font-black text-[8px] mb-1">GST Summary</div>
@@ -149,8 +149,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
             </div>
           )}
 
-          {/* QR Code */}
-          {settings.printQrCode && qrCodeImg && (
+          {settings.printQrCode && qrCodeImg && order.paymentMode === 'UPI' && (
             <div className="text-center mb-4">
               <p className="text-[8px] font-black mb-2">Scan to Pay using UPI</p>
               <img src={qrCodeImg} alt="Payment QR" className="mx-auto w-28 h-28 mb-1" />
@@ -158,8 +157,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
             </div>
           )}
 
-          {/* Footer */}
-          <div className="text-center space-y-1">
+          <div className="text-center space-y-1 mt-4">
             <p className="font-bold text-[9px]">{settings.thankYouMessage}</p>
             <p className="text-[8px]">Contact: {settings.phone}</p>
             <div className="mt-4 opacity-40 text-[6px] italic">*** End of Invoice ***</div>
@@ -174,6 +172,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
           <div className="flex justify-between font-bold text-[10px] mb-2 px-1">
             <span>TABLE: {table?.number || 'N/A'}</span>
             <span>{formattedTime}</span>
+          </div>
+          <div className="text-left text-[8px] mb-2 px-1">
+             <span>Capt: {captain?.name || 'N/A'}</span>
           </div>
           <table className="w-full text-left">
              <thead>

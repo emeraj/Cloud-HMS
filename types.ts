@@ -15,7 +15,7 @@ export interface Tax {
   rate: number; // e.g., 5 for 5%
 }
 
-export interface Waiter {
+export interface Captain {
   id: string;
   name: string;
   phone?: string;
@@ -50,7 +50,7 @@ export interface Table {
 export interface Order {
   id: string;
   tableId: string;
-  waiterId: string;
+  captainId: string;
   items: OrderItem[];
   status: 'Pending' | 'Billed' | 'Settled';
   timestamp: string;
@@ -58,6 +58,9 @@ export interface Order {
   taxAmount: number;
   totalAmount: number;
   kotCount: number;
+  customerName?: string;
+  paymentMode?: 'Cash' | 'UPI' | 'Card';
+  cashierName?: string;
 }
 
 export interface BusinessSettings {
