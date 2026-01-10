@@ -30,15 +30,28 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
+/**
+ * Clean data before sending to Firestore.
+ * Firestore rejects 'undefined' values.
+ * This function also ensures we don't recurse into circular SDK objects.
+ */
 const sanitizeData = (obj: any): any => {
-  if (Array.isArray(obj)) return obj.map(v => sanitizeData(v));
-  if (obj !== null && typeof obj === 'object') {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(v => sanitizeData(v));
+  }
+
+  // Only recurse if it's a plain object { ... }
+  // This prevents traversing SDK-specific classes like DocumentReference or Query
+  if (typeof obj === 'object' && Object.prototype.toString.call(obj) === '[object Object]') {
     return Object.fromEntries(
       Object.entries(obj)
         .filter(([_, v]) => v !== undefined)
         .map(([k, v]) => [k, sanitizeData(v)])
     );
   }
+  
   return obj;
 };
 
@@ -112,7 +125,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     unsubscribes.push(createListener("menu", setMenu));
     unsubscribes.push(createListener("groups", setGroups));
     unsubscribes.push(createListener("taxes", setTaxes));
-    unsubscribes.push(createListener("waiters", setCaptains)); // Use existing collection but new setter
+    unsubscribes.push(createListener("waiters", setCaptains)); 
     unsubscribes.push(createListener("orders", setOrders));
 
     const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), 
@@ -135,6 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     try {
       const docRef = col === "config" ? doc(db, col, "business_settings") : doc(db, col, item.id);
+      // Firestore setDoc expects plain objects, but our sanitize function helps remove 'undefined' fields
       await setDoc(docRef, sanitizeData(item));
     } finally {
       setIsSyncing(false);
