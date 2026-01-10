@@ -5,31 +5,35 @@ import { Order } from '../types';
 
 interface ReportsProps {
   onPrint?: (type: 'BILL' | 'KOT', order: Order) => void;
+  onPrintDayBook?: (orders: Order[], date: string) => void;
 }
 
-const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
+const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const { orders, captains, setActiveTable, tables, upsert, remove } = useApp();
   const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const completedOrders = useMemo(() => 
-    orders.filter(o => o.status === 'Settled' || o.status === 'Billed')
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), 
-    [orders]
-  );
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
+      const isStatusMatch = o.status === 'Settled' || o.status === 'Billed';
+      return isStatusMatch && orderDate === selectedDate;
+    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [orders, selectedDate]);
 
-  const totalSales = useMemo(() => completedOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [completedOrders]);
+  const totalSales = useMemo(() => filteredOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [filteredOrders]);
 
   const captainStats = useMemo(() => {
     return captains.map(w => {
-      const captainOrders = completedOrders.filter(o => o.captainId === w.id);
+      const captainOrders = filteredOrders.filter(o => o.captainId === w.id);
       const sales = captainOrders.reduce((sum, o) => sum + o.totalAmount, 0);
       return { name: w.name, count: captainOrders.length, sales };
     }).sort((a, b) => b.sales - a.sales);
-  }, [captains, completedOrders]);
+  }, [captains, filteredOrders]);
 
   const itemSummary = useMemo(() => {
     const summary: Record<string, { name: string, quantity: number, revenue: number }> = {};
-    completedOrders.forEach(order => {
+    filteredOrders.forEach(order => {
       order.items.forEach(item => {
         if (!summary[item.menuItemId]) {
           summary[item.menuItemId] = { name: item.name, quantity: 0, revenue: 0 };
@@ -39,7 +43,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
       });
     });
     return Object.values(summary).sort((a, b) => b.revenue - a.revenue);
-  }, [completedOrders]);
+  }, [filteredOrders]);
 
   const handleDeleteOrder = async (orderId: string) => {
     if (confirm("Delete this order record permanently?")) {
@@ -62,18 +66,44 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Sales Today</p>
-          <p className="text-lg font-bold text-emerald-400">₹{totalSales.toFixed(2)}</p>
+      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-end mb-2">
+        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Sales ({selectedDate})</p>
+            <p className="text-lg font-bold text-emerald-400">₹{totalSales.toFixed(2)}</p>
+          </div>
+          <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Orders Count</p>
+            <p className="text-lg font-bold text-white">{filteredOrders.length}</p>
+          </div>
+          <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Top Item Revenue</p>
+            <p className="text-lg font-bold text-indigo-400">₹{itemSummary[0]?.revenue.toFixed(2) || '0.00'}</p>
+          </div>
         </div>
-        <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Orders Processed</p>
-          <p className="text-lg font-bold text-white">{completedOrders.length}</p>
-        </div>
-        <div className="bg-[#1e293b] p-3.5 rounded-xl border border-slate-700">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Best Seller Revenue</p>
-          <p className="text-lg font-bold text-indigo-400">₹{itemSummary[0]?.revenue.toFixed(2) || '0.00'}</p>
+
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="bg-[#1e293b] p-3 rounded-xl border border-slate-700 min-w-[200px]">
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Select Report Date</label>
+            <div className="relative">
+              <input 
+                type="date" 
+                className="w-full bg-[#fdf9d1] text-slate-900 text-xs font-bold py-2 px-3 rounded-lg outline-none focus:ring-2 ring-indigo-500 appearance-none"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+              <i className="fa-solid fa-calendar-days absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"></i>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => onPrintDayBook?.(filteredOrders, selectedDate)}
+            disabled={filteredOrders.length === 0}
+            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white p-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest self-stretch sm:self-end"
+          >
+            <i className="fa-solid fa-print"></i>
+            Print Report
+          </button>
         </div>
       </div>
 
@@ -115,10 +145,10 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-[#1e293b]/10 text-[11px]">
-                  {completedOrders.length === 0 ? (
-                    <tr><td colSpan={7} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No transaction data found</td></tr>
+                  {filteredOrders.length === 0 ? (
+                    <tr><td colSpan={7} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No transaction data for {selectedDate}</td></tr>
                   ) : (
-                    completedOrders.map(order => (
+                    filteredOrders.map(order => (
                       <tr key={order.id} className="border-b border-slate-800/50 hover:bg-slate-700/20 transition-colors">
                         <td className="p-3">
                           <div className="font-mono font-black text-indigo-400">#{order.id.slice(-6).toUpperCase()}</div>
@@ -172,7 +202,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
                 </thead>
                 <tbody className="bg-[#1e293b]/10 text-[11px]">
                   {itemSummary.length === 0 ? (
-                    <tr><td colSpan={3} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No sales records yet</td></tr>
+                    <tr><td colSpan={3} className="p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No sales records for {selectedDate}</td></tr>
                   ) : (
                     itemSummary.map((item, idx) => (
                       <tr key={idx} className="border-b border-slate-800/50 hover:bg-slate-700/20">
@@ -190,7 +220,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint }) => {
           {reportType === 'CaptainWise' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {captainStats.length === 0 ? (
-                <div className="col-span-full p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No staff performance data</div>
+                <div className="col-span-full p-10 text-center text-slate-600 font-bold uppercase italic tracking-wider">No staff performance data for {selectedDate}</div>
               ) : (
                 captainStats.map((stat, idx) => (
                   <div key={idx} className="bg-[#0f172a] p-3 rounded-xl border border-slate-800 flex justify-between items-center hover:border-indigo-500/50 transition-all group">

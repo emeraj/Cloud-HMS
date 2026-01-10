@@ -5,11 +5,63 @@ import { Order } from '../types';
 
 interface PrintSectionProps {
   order: Order | null;
-  type: 'BILL' | 'KOT';
+  reportOrders?: Order[];
+  reportDate?: string;
+  type: 'BILL' | 'KOT' | 'DAYBOOK';
 }
 
-const PrintSection: React.FC<PrintSectionProps> = ({ order, type }) => {
+const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate }) => {
   const { settings, tables, captains } = useApp();
+  
+  if (type === 'DAYBOOK') {
+    if (!reportOrders) return null;
+    const total = reportOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+    return (
+      <div id="print-section" className="text-black bg-white font-mono text-[10px] uppercase leading-tight print-view selection:bg-transparent">
+        <div className="flex flex-col items-stretch">
+          <div className="text-center mb-1">
+            <h1 className="text-[13px] font-black tracking-tight mb-0.5">{settings.name}</h1>
+            <p className="text-[11px] font-black border-y border-black border-dashed py-1 my-1">DAYBOOK REPORT</p>
+            <p className="text-[9px] font-bold">DATE: {reportDate}</p>
+          </div>
+
+          <div className="border-t border-black border-dashed my-1"></div>
+
+          <table className="w-full text-left text-[9px]">
+            <thead>
+              <tr className="border-b border-black border-dashed">
+                <th className="py-1 font-black">Bill #</th>
+                <th className="py-1 font-black">Time</th>
+                <th className="py-1 font-black">Cashier</th>
+                <th className="py-1 text-right font-black">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {reportOrders.map((o) => (
+                <tr key={o.id} className="border-b border-black border-dotted">
+                  <td className="py-1">#{o.id.slice(-6).toUpperCase()}</td>
+                  <td className="py-1">{new Date(o.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
+                  <td className="py-1 truncate max-w-[40px]">{o.cashierName || 'Adm'}</td>
+                  <td className="py-1 text-right font-bold">{o.totalAmount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-t border-black border-dashed mt-2 pt-2 flex justify-between font-black text-[12px]">
+            <span>TOTAL SALES:</span>
+            <span>₹{total.toFixed(2)}</span>
+          </div>
+
+          <div className="text-center mt-6">
+            <p className="text-[8px] opacity-40 italic">*** End of Report ***</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!order) return null;
 
   const table = tables.find(t => t.id === order.tableId);

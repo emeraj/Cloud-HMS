@@ -96,10 +96,17 @@ const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({
 const MainContent: React.FC = () => {
   const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
-  const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT', order: Order } | null>(null);
+  const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
+    setTimeout(() => {
+      window.print();
+    }, 400);
+  };
+
+  const handlePrintDayBook = (orders: Order[], date: string) => {
+    setPrintData({ type: 'DAYBOOK', reportOrders: orders, reportDate: date });
     setTimeout(() => {
       window.print();
     }, 400);
@@ -148,7 +155,7 @@ const MainContent: React.FC = () => {
             <main className="max-w-7xl mx-auto p-4 md:p-8">
               {activeView === 'Dashboard' && <Dashboard />}
               {activeView === 'Masters' && <Masters />}
-              {activeView === 'Reports' && <Reports onPrint={handlePrint} />}
+              {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
                 <div className="py-4">
                   <div className="bg-[#1e293b] rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl mx-auto border border-slate-700">
@@ -207,7 +214,12 @@ const MainContent: React.FC = () => {
           </div>
         )}
       </div>
-      <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} />
+      <PrintSection 
+        order={printData?.order || null} 
+        type={printData?.type || 'BILL'} 
+        reportOrders={printData?.reportOrders}
+        reportDate={printData?.reportDate}
+      />
     </div>
   );
 };
