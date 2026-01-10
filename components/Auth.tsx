@@ -53,7 +53,7 @@ const Auth: React.FC = () => {
             Cloud-<span className="text-indigo-600">HMS</span>
           </h1>
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">
-            {isLogin ? 'Professional Management' : 'System Onboarding'}
+            {isLogin ? 'Professional Restaurant System' : 'System Onboarding'}
           </p>
         </div>
 
