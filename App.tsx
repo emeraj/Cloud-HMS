@@ -12,8 +12,10 @@ type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
 const ScrollingFooter: React.FC = () => {
   return (
-    <div className="no-print fixed bottom-0 left-0 right-0 md:left-64 bg-red-600 border-t border-red-700 py-1 px-4 z-[45] overflow-hidden select-none transition-colors duration-300 shadow-[0_-4px_10px_rgba(220,38,38,0.2)]">
-      <div className="animate-marquee-ltr text-[8px] font-black text-white uppercase tracking-[0.2em]">
+    <div className="no-print fixed bottom-0 left-0 right-0 md:left-64 bg-red-600 border-t border-red-700 h-6 flex items-center z-[45] overflow-hidden select-none transition-colors duration-300 shadow-[0_-2px_10px_rgba(0,0,0,0.15)]">
+      <div className="animate-marquee-ltr text-[8px] font-bold text-white uppercase tracking-widest whitespace-nowrap">
+        Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com
       </div>
     </div>
