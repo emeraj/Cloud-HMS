@@ -8,6 +8,58 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    :root {
+      --bg-app: #0b1120;
+      --bg-sidebar: #111827;
+      --bg-card: #1f2937;
+      --bg-card-alt: #111827;
+      --border-main: #374151;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --input-bg: #fdf9d1;
+      --input-text: #111827;
+      --accent-primary: #6366f1;
+    }
+
+    .theme-light {
+      --bg-app: #f3f4f6;
+      --bg-sidebar: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-alt: #f9fafb;
+      --border-main: #e5e7eb;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --input-bg: #ffffff;
+      --input-text: #111827;
+      --accent-primary: #4f46e5;
+    }
+
+    body {
+      background-color: var(--bg-app);
+      color: var(--text-main);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .glass-card {
+      background: rgba(31, 41, 55, 0.4);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .theme-light .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* Override Tailwind utilities with CSS variables where applicable */
+    .bg-app { background-color: var(--bg-app); }
+    .bg-sidebar { background-color: var(--bg-sidebar); }
+    .bg-card { background-color: var(--bg-card); }
+    .bg-card-alt { background-color: var(--bg-card-alt); }
+    .border-main { border-color: var(--border-main); }
+    .text-main { color: var(--text-main); }
+    .text-muted { color: var(--text-muted); }
+
     /* Default: Hide the print section on screen */
     #print-section {
       display: none;
@@ -19,19 +71,8 @@
     }
 
     @media print {
-      /* Hide all elements that have the no-print class */
-      .no-print {
-        display: none !important;
-      }
-      
-      /* Reset layout for the root container to allow printing children */
-      #root {
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
-      }
-
-      /* Force show the print section */
+      .no-print { display: none !important; }
+      #root { padding: 0 !important; margin: 0 !important; display: block !important; }
       #print-section {
         display: block !important;
         width: 80mm !important;
@@ -42,46 +83,17 @@
         position: static !important;
         visibility: visible !important;
       }
-
-      #print-section * {
-        visibility: visible !important;
-        color: black !important;
-      }
-
-      html, body {
-        background: white !important;
-        color: black !important;
-        width: 80mm;
-        margin: 0;
-        padding: 0;
-      }
+      #print-section * { visibility: visible !important; color: black !important; }
+      html, body { background: white !important; color: black !important; width: 80mm; margin: 0; padding: 0; }
     }
 
-    /* Screen-only custom scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1a1c2e;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 10px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
-    }
-    input, select, textarea {
-      transition: all 0.2s ease-in-out;
-    }
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    input, select, textarea { transition: all 0.2s ease-in-out; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 <script type="importmap">
 {
@@ -95,7 +107,7 @@
 }
 </script>
 </head>
-<body class="bg-[#0f172a] text-slate-100 font-sans antialiased">
+<body class="antialiased font-sans">
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

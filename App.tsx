@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import Dashboard from './components/Dashboard';
 import PosView from './components/PosView';
@@ -12,7 +12,7 @@ import { Order } from './types';
 type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
 const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
-  const { logout, user, isSyncing } = useApp();
+  const { logout, user, isSyncing, settings } = useApp();
   const menuItems = [
     { id: 'Dashboard', icon: 'fa-solid fa-chart-line', label: 'Dashboard' },
     { id: 'Masters', icon: 'fa-solid fa-database', label: 'Master Data' },
@@ -21,16 +21,16 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
   ];
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-[#1e293b] border-r border-slate-700 h-full fixed top-0 left-0">
+    <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-main h-full fixed top-0 left-0">
       <div className="p-6 flex items-center gap-3">
         <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
           <i className="fa-solid fa-cloud"></i>
         </div>
         <div>
-          <h1 className="text-xl font-black text-white tracking-tight leading-none">Zesta-<span className="text-indigo-400">POS</span></h1>
+          <h1 className="text-xl font-black text-main tracking-tight leading-none">Zesta-<span className="text-indigo-400">POS</span></h1>
           <div className="flex items-center gap-1.5 mt-1">
             <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Cloud Live'}</span>
+            <span className="text-[8px] font-black text-muted uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Cloud Live'}</span>
           </div>
         </div>
       </div>
@@ -43,7 +43,7 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-sm ${
               activeView === item.id 
                 ? 'bg-indigo-600 text-white shadow-lg' 
-                : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+                : 'text-muted hover:bg-slate-700/10 hover:text-main'
             }`}
           >
             <i className={`${item.icon} text-xs`}></i>
@@ -52,15 +52,15 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
         ))}
       </nav>
       
-      <div className="p-4 border-t border-slate-700 space-y-3">
-        <div className="bg-[#0f172a] p-3 rounded-xl border border-slate-700">
+      <div className="p-4 border-t border-main space-y-3">
+        <div className="bg-card-alt p-3 rounded-xl border border-main">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-indigo-600/20 text-indigo-400 rounded-lg flex items-center justify-center">
                <i className="fa-solid fa-user text-[10px]"></i>
             </div>
             <div className="overflow-hidden">
-              <p className="text-[10px] font-black text-slate-300 truncate leading-none uppercase">{user?.displayName || 'Admin'}</p>
-              <p className="text-[8px] font-bold text-slate-500 truncate">{user?.email}</p>
+              <p className="text-[10px] font-black text-main truncate leading-none uppercase">{user?.displayName || 'Admin'}</p>
+              <p className="text-[8px] font-bold text-muted truncate">{user?.email}</p>
             </div>
           </div>
         </div>
@@ -77,14 +77,14 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
 
 const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#1e293b] border-t border-slate-700 flex justify-around p-1.5 z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50">
       {[
         { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
         { id: 'Masters', icon: 'fa-database', label: 'Data' },
         { id: 'Reports', icon: 'fa-chart-pie', label: 'Bills' },
         { id: 'Settings', icon: 'fa-gear', label: 'Config' }
       ].map(tab => (
-        <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-400' : 'text-slate-500'}`}>
+        <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-400' : 'text-muted'}`}>
           <i className={`fa-solid fa-${tab.icon} text-sm`}></i>
           <span className="text-[8px] mt-1 font-bold uppercase">{tab.label}</span>
         </button>
@@ -97,6 +97,14 @@ const MainContent: React.FC = () => {
   const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
   const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
+
+  useEffect(() => {
+    if (settings.theme === 'light') {
+      document.body.classList.add('theme-light');
+    } else {
+      document.body.classList.remove('theme-light');
+    }
+  }, [settings.theme]);
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
@@ -121,16 +129,16 @@ const MainContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0f172a] flex flex-col items-center justify-center text-white p-6 text-center">
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main p-6 text-center">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
         <h2 className="text-sm font-black uppercase tracking-widest">Connecting to Cloud...</h2>
-        <p className="text-slate-500 text-[10px] mt-2 uppercase tracking-widest opacity-50">Initializing real-time data stream</p>
+        <p className="text-muted text-[10px] mt-2 uppercase tracking-widest opacity-50">Initializing real-time data stream</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 overflow-x-hidden">
+    <div className="min-h-screen bg-app text-main overflow-x-hidden">
       <div className="no-print">
         {activeTable ? (
           <PosView onBack={() => setActiveTable(null)} onPrint={handlePrint} />
@@ -138,15 +146,15 @@ const MainContent: React.FC = () => {
           <div className="md:pl-64 pb-20 md:pb-0">
             <Sidebar activeView={activeView} setView={setView} />
             
-            <header className="bg-[#1e293b] border-b border-slate-700 p-3 sticky top-0_z-10 flex justify-between items-center md:hidden">
+            <header className="bg-sidebar border-b border-main p-3 sticky top-0_z-10 flex justify-between items-center md:hidden">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm"><i className="fa-solid fa-cloud"></i></div>
-                <h1 className="text-sm font-black text-white tracking-tight uppercase">Zesta-POS</h1>
+                <h1 className="text-sm font-black text-main tracking-tight uppercase">Zesta-POS</h1>
               </div>
               <div className="flex items-center gap-3">
-                 <div className="flex items-center gap-1.5 bg-[#0f172a] px-2 py-1 rounded-full border border-slate-700">
+                 <div className="flex items-center gap-1.5 bg-card-alt px-2 py-1 rounded-full border border-main">
                     <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-                    <span className="text-[8px] font-black text-slate-400 uppercase">{isSyncing ? 'SYNC' : 'LIVE'}</span>
+                    <span className="text-[8px] font-black text-muted uppercase">{isSyncing ? 'SYNC' : 'LIVE'}</span>
                  </div>
                  <button onClick={logout} className="text-rose-500 text-sm p-1"><i className="fa-solid fa-power-off"></i></button>
               </div>
@@ -158,56 +166,76 @@ const MainContent: React.FC = () => {
               {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
                 <div className="py-4">
-                  <div className="bg-[#1e293b] rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl mx-auto border border-slate-700">
-                    <h2 className="text-lg font-black mb-6 flex items-center gap-3 text-white uppercase tracking-wider">
+                  <div className="bg-card rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl mx-auto border border-main">
+                    <h2 className="text-lg font-black mb-6 flex items-center gap-3 text-main uppercase tracking-wider">
                        <i className="fa-solid fa-gears text-indigo-400"></i> Business Configuration
                     </h2>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div 
                           onClick={() => setSettings({...settings, invoiceFormat: 1})}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 1 ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-[#0f172a]'}`}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 1 ? 'border-indigo-500 bg-indigo-500/10' : 'border-main bg-card-alt'}`}
                         >
-                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Format 1</p>
-                           <p className="text-xs font-bold text-white">TAX INVOICE</p>
-                           <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">Standard GST format</p>
+                           <p className="text-[10px] font-black text-muted uppercase mb-1">Format 1</p>
+                           <p className="text-xs font-bold text-main">TAX INVOICE</p>
+                           <p className="text-[9px] text-muted mt-1 uppercase font-black">Standard GST format</p>
                         </div>
                         <div 
                           onClick={() => setSettings({...settings, invoiceFormat: 2})}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 2 ? 'border-amber-500 bg-amber-500/10' : 'border-slate-700 bg-[#0f172a]'}`}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 2 ? 'border-amber-500 bg-amber-500/10' : 'border-main bg-card-alt'}`}
                         >
-                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Format 2</p>
-                           <p className="text-xs font-bold text-white">ESTIMATE</p>
-                           <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">GST Features Removed</p>
+                           <p className="text-[10px] font-black text-muted uppercase mb-1">Format 2</p>
+                           <p className="text-xs font-bold text-main">ESTIMATE</p>
+                           <p className="text-[9px] text-muted mt-1 uppercase font-black">GST Features Removed</p>
                         </div>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Restaurant Name</label>
-                        <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Address</label>
-                        <textarea className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Phone</label>
-                          <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                      <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-muted uppercase tracking-widest">Color Theme</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button 
+                            onClick={() => setSettings({...settings, theme: 'light'})}
+                            className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${settings.theme === 'light' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500' : 'border-main bg-card-alt text-muted'}`}
+                          >
+                            <i className="fa-solid fa-sun text-sm"></i> Light Mode
+                          </button>
+                          <button 
+                            onClick={() => setSettings({...settings, theme: 'dark'})}
+                            className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${settings.theme === 'dark' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500' : 'border-main bg-card-alt text-muted'}`}
+                          >
+                            <i className="fa-solid fa-moon text-sm"></i> Dark Mode
+                          </button>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">GSTIN</label>
-                          <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">FSSAI License No.</label>
-                        <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
                       </div>
 
-                      <div className="p-4 bg-[#0f172a] rounded-xl border border-slate-700 space-y-3">
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Payment QR Config (UPI)</label>
-                        <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.upiId || ''} placeholder="e.g., store@upi" onChange={e => setSettings({...settings, upiId: e.target.value})} />
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Restaurant Name</label>
+                          <input className="w-full p-3 bg-[#fdf9d1] theme-light:bg-white rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Address</label>
+                          <textarea className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Phone</label>
+                            <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">GSTIN</label>
+                            <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">FSSAI License No.</label>
+                          <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
+                        </div>
+                      </div>
+
+                      <div className="p-4 bg-card-alt rounded-xl border border-main space-y-3">
+                        <label className="block text-[10px] font-bold text-muted uppercase tracking-widest">Payment QR Config (UPI)</label>
+                        <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.upiId || ''} placeholder="e.g., store@upi" onChange={e => setSettings({...settings, upiId: e.target.value})} />
                         <div className="flex flex-col gap-2 pt-1">
                           {[
                             { key: 'printQrCode', label: 'Print Scan-to-Pay QR on Bill' },
@@ -215,7 +243,7 @@ const MainContent: React.FC = () => {
                           ].map(opt => (
                             <label key={opt.key} className={`flex items-center gap-3 cursor-pointer group ${settings.invoiceFormat === 2 ? 'opacity-30 pointer-events-none' : ''}`}>
                               <input type="checkbox" disabled={settings.invoiceFormat === 2} checked={settings[opt.key as keyof typeof settings] as boolean} onChange={e => setSettings({...settings, [opt.key]: e.target.checked})} className="w-4 h-4 accent-indigo-500" />
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">{opt.label}</span>
+                              <span className="text-[10px] font-bold text-muted uppercase tracking-widest group-hover:text-main transition-colors">{opt.label}</span>
                             </label>
                           ))}
                         </div>
