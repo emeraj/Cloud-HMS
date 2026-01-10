@@ -70,34 +70,34 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Table Management Section - Compact Version */}
-      <div className="bg-card rounded-2xl shadow-md border border-main p-4 md:p-5">
+      <div className="bg-card rounded-2xl shadow-md border border-main p-3 md:p-5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
           <div>
-            <h2 className="text-lg font-black text-main uppercase tracking-tighter mb-0.5">Table Overview</h2>
-            <p className="text-[8px] font-black uppercase tracking-[1.5px] bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">
+            <h2 className="text-base md:text-lg font-black text-main uppercase tracking-tighter mb-0.5">Table Overview</h2>
+            <p className="text-[7px] md:text-[8px] font-black uppercase tracking-[1.5px] bg-gradient-to-r from-cyan-600 to-indigo-600 bg-clip-text text-transparent">
               Live Floor Management
             </p>
           </div>
           
           {/* Status Pills - Legend */}
-          <div className="flex flex-wrap gap-2">
-            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 group cursor-default">
-              <div className="w-1 h-1 bg-slate-400 rounded-full group-hover:scale-125 transition-transform"></div>
-              <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Free</span>
+          <div className="flex flex-wrap gap-1.5 md:gap-2">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
+              <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Free</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 group cursor-default">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
               <div className="w-1 h-1 bg-red-600 rounded-full animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]"></div>
-              <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Busy</span>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Busy</span>
             </div>
-            <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 group cursor-default">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
               <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
-              <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Bill</span>
+              <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Bill</span>
             </div>
           </div>
         </div>
 
-        {/* Tables Grid - Tighter Layout */}
-        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2.5 pb-2">
+        {/* Tables Grid - Dynamic Columns */}
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 md:gap-2.5 pb-2">
           {sortedTables.map(table => (
             <div 
               key={table.id}
@@ -109,17 +109,17 @@ const Dashboard: React.FC = () => {
                 ${table.status === 'Billing' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : ''}
               `}
             >
-              <div className={`mb-1 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105 ${
+              <div className={`mb-1 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105 ${
                 table.status === 'Available' ? 'bg-slate-100 text-slate-400 group-hover:text-cyan-500' :
                 table.status === 'Occupied' ? 'bg-red-600 text-white shadow-sm' :
                 'bg-amber-100 text-amber-500'
               }`}>
-                <i className="fa-solid fa-chair text-sm"></i>
+                <i className="fa-solid fa-chair text-[10px] md:text-sm"></i>
               </div>
               
               <div className="text-center">
-                <span className={`font-black text-sm tracking-tight ${table.status === 'Available' ? 'text-slate-400 group-hover:text-main' : 'text-main'}`}>{table.number}</span>
-                <div className={`text-[6px] uppercase font-black tracking-widest opacity-80 ${
+                <span className={`font-black text-xs md:text-sm tracking-tight ${table.status === 'Available' ? 'text-slate-400 group-hover:text-main' : 'text-main'}`}>{table.number}</span>
+                <div className={`text-[5px] md:text-[6px] uppercase font-black tracking-widest opacity-80 ${
                   table.status === 'Available' ? 'text-slate-400' : 
                   table.status === 'Occupied' ? 'text-red-600' : 
                   'text-amber-600'
@@ -129,8 +129,8 @@ const Dashboard: React.FC = () => {
               </div>
               
               {/* Status Light Overlay */}
-              <div className="absolute top-2 right-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${
+              <div className="absolute top-1.5 right-1.5">
+                <div className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full ${
                   table.status === 'Available' ? 'bg-slate-300' :
                   table.status === 'Occupied' ? 'bg-red-600 animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]' :
                   'bg-amber-500'
