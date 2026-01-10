@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
               <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Free</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 group cursor-default">
-              <div className="w-1 h-1 bg-rose-500 rounded-full animate-pulse"></div>
+              <div className="w-1 h-1 bg-red-600 rounded-full animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]"></div>
               <span className="text-[8px] font-black text-slate-900 uppercase tracking-widest">Busy</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 group cursor-default">
@@ -105,13 +105,13 @@ const Dashboard: React.FC = () => {
               className={`
                 relative aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200 border group
                 ${table.status === 'Available' ? 'bg-slate-50 border-slate-200 hover:border-cyan-500/50 hover:bg-cyan-50' : ''}
-                ${table.status === 'Occupied' ? 'bg-rose-50 border-rose-300 text-rose-600 shadow-sm' : ''}
+                ${table.status === 'Occupied' ? 'bg-red-50 border-red-500 text-red-700 shadow-sm' : ''}
                 ${table.status === 'Billing' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : ''}
               `}
             >
               <div className={`mb-1 w-7 h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105 ${
                 table.status === 'Available' ? 'bg-slate-100 text-slate-400 group-hover:text-cyan-500' :
-                table.status === 'Occupied' ? 'bg-rose-100 text-rose-500' :
+                table.status === 'Occupied' ? 'bg-red-600 text-white shadow-sm' :
                 'bg-amber-100 text-amber-500'
               }`}>
                 <i className="fa-solid fa-chair text-sm"></i>
@@ -119,9 +119,9 @@ const Dashboard: React.FC = () => {
               
               <div className="text-center">
                 <span className={`font-black text-sm tracking-tight ${table.status === 'Available' ? 'text-slate-400 group-hover:text-main' : 'text-main'}`}>{table.number}</span>
-                <div className={`text-[6px] uppercase font-black tracking-widest opacity-60 ${
+                <div className={`text-[6px] uppercase font-black tracking-widest opacity-80 ${
                   table.status === 'Available' ? 'text-slate-400' : 
-                  table.status === 'Occupied' ? 'text-rose-600' : 
+                  table.status === 'Occupied' ? 'text-red-600' : 
                   'text-amber-600'
                 }`}>
                   {table.status.slice(0, 4)}
@@ -132,7 +132,7 @@ const Dashboard: React.FC = () => {
               <div className="absolute top-2 right-2">
                 <div className={`w-1.5 h-1.5 rounded-full ${
                   table.status === 'Available' ? 'bg-slate-300' :
-                  table.status === 'Occupied' ? 'bg-rose-500 animate-pulse' :
+                  table.status === 'Occupied' ? 'bg-red-600 animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]' :
                   'bg-amber-500'
                 }`}></div>
               </div>
