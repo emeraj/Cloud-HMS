@@ -62,9 +62,23 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
     const totalAmount = subTotal + taxAmount;
 
-    const orderId = existingOrder?.id || `ORD-${Date.now()}`;
+    let orderId = existingOrder?.id;
+    let dailyBillNo = existingOrder?.dailyBillNo;
+
+    if (!orderId) {
+      orderId = `ORD-${Date.now()}`;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
+      const maxNum = todayOrders.reduce((max, o) => {
+        const num = parseInt(o.dailyBillNo || '0');
+        return num > max ? num : max;
+      }, 0);
+      dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
+    }
+
     const newOrder: Order = {
       id: orderId,
+      dailyBillNo: dailyBillNo!,
       tableId: activeTable,
       captainId: captainId,
       items: updatedItems,
@@ -88,7 +102,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         currentOrderId: orderId 
       });
     }
-  }, [activeTable, currentTable, existingOrder, upsert, user]);
+  }, [activeTable, currentTable, existingOrder, upsert, user, orders]);
 
   const addToCart = async (item: MenuItem) => {
     let updatedItems: OrderItem[] = [];
@@ -128,9 +142,18 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       await upsert("orders", updatedOrder);
       onPrint('KOT', updatedOrder);
     } else {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
+      const maxNum = todayOrders.reduce((max, o) => {
+        const num = parseInt(o.dailyBillNo || '0');
+        return num > max ? num : max;
+      }, 0);
+      const dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
+      
       const orderId = `ORD-${Date.now()}`;
       const newOrder: Order = {
         id: orderId,
+        dailyBillNo: dailyBillNo,
         tableId: activeTable!,
         captainId: selectedCaptain,
         items: cartItems,
@@ -149,9 +172,23 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleBill = async () => {
-    const orderId = existingOrder?.id || `ORD-${Date.now()}`;
+    let orderId = existingOrder?.id;
+    let dailyBillNo = existingOrder?.dailyBillNo;
+
+    if (!orderId) {
+      orderId = `ORD-${Date.now()}`;
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
+      const maxNum = todayOrders.reduce((max, o) => {
+        const num = parseInt(o.dailyBillNo || '0');
+        return num > max ? num : max;
+      }, 0);
+      dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
+    }
+
     const newOrder: Order = {
       id: orderId,
+      dailyBillNo: dailyBillNo!,
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: cartItems,

@@ -49,6 +49,7 @@ export interface Table {
 
 export interface Order {
   id: string;
+  dailyBillNo: string; // e.g., 00001
   tableId: string;
   captainId: string;
   items: OrderItem[];

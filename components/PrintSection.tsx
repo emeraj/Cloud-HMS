@@ -40,7 +40,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <tbody>
               {reportOrders.map((o) => (
                 <tr key={o.id} className="border-b border-black border-dotted">
-                  <td className="py-1">#{o.id.slice(-6).toUpperCase()}</td>
+                  <td className="py-1">#{o.dailyBillNo || o.id.slice(-5)}</td>
                   <td className="py-1">{new Date(o.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
                   <td className="py-1 truncate max-w-[40px]">{o.cashierName || 'Adm'}</td>
                   <td className="py-1 text-right font-bold">{o.totalAmount.toFixed(2)}</td>
@@ -80,7 +80,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
   const isEstimate = settings.invoiceFormat === 2;
 
   const upiUrl = settings.upiId 
-    ? `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${order.totalAmount.toFixed(2)}&cu=INR&tn=BILL_${order.id.slice(-4)}`
+    ? `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${order.totalAmount.toFixed(2)}&cu=INR&tn=BILL_${order.dailyBillNo || order.id.slice(-4)}`
     : '';
 
   const qrCodeImg = upiUrl 
@@ -121,7 +121,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="space-y-0.5 mb-1.5 px-0.5">
             <div className="flex justify-between">
-              <span>{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST' : 'INV'}-{order.id.slice(-6).toUpperCase()}</span>
+              <span>{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST-' : 'INV-'}{order.dailyBillNo || order.id.slice(-5)}</span>
               <span>DATE: {formattedDate}</span>
             </div>
             <div className="flex justify-between">

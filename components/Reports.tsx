@@ -151,7 +151,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                     filteredOrders.map(order => (
                       <tr key={order.id} className="border-b border-slate-800/50 hover:bg-slate-700/20 transition-colors">
                         <td className="p-3">
-                          <div className="font-mono font-black text-indigo-400">#{order.id.slice(-6).toUpperCase()}</div>
+                          <div className="font-mono font-black text-indigo-400">#{order.dailyBillNo || order.id.slice(-5)}</div>
                           <div className={`text-[8px] font-bold uppercase mt-0.5 ${order.status === 'Settled' ? 'text-emerald-500' : 'text-orange-500'}`}>{order.status}</div>
                         </td>
                         <td className="p-3 text-slate-400 font-medium">
