@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useApp } from '../store';
 
 const Dashboard: React.FC = () => {
@@ -12,6 +12,18 @@ const Dashboard: React.FC = () => {
   const dailySales = todayOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
   const totalInvoices = todayOrders.length;
   const activeTablesCount = tables.filter(t => t.status !== 'Available').length;
+
+  // Sort tables numerically by their number property
+  const sortedTables = useMemo(() => {
+    return [...tables].sort((a, b) => {
+      const numA = parseInt(a.number, 10);
+      const numB = parseInt(b.number, 10);
+      if (isNaN(numA) || isNaN(numB)) {
+        return a.number.localeCompare(b.number);
+      }
+      return numA - numB;
+    });
+  }, [tables]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -83,7 +95,7 @@ const Dashboard: React.FC = () => {
 
         {/* Tables Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-8 pb-4">
-          {tables.map(table => (
+          {sortedTables.map(table => (
             <div 
               key={table.id}
               onClick={() => setActiveTable(table.id)}
