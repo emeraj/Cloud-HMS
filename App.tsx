@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import Dashboard from './components/Dashboard';
@@ -21,13 +20,13 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
   ];
 
   return (
-    <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-main h-full fixed top-0 left-0">
+    <div className="hidden md:flex flex-col w-64 bg-sidebar border-r border-main h-full fixed top-0 left-0 transition-colors duration-300">
       <div className="p-6 flex items-center gap-3">
         <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white text-xl shadow-lg">
           <i className="fa-solid fa-cloud"></i>
         </div>
         <div>
-          <h1 className="text-xl font-black text-main tracking-tight leading-none">Zesta-<span className="text-indigo-400">POS</span></h1>
+          <h1 className="text-xl font-black text-main tracking-tight leading-none">Zesta-<span className="text-indigo-600">POS</span></h1>
           <div className="flex items-center gap-1.5 mt-1">
             <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
             <span className="text-[8px] font-black text-muted uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Cloud Live'}</span>
@@ -53,9 +52,9 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
       </nav>
       
       <div className="p-4 border-t border-main space-y-3">
-        <div className="bg-card-alt p-3 rounded-xl border border-main">
+        <div className="bg-app/50 p-3 rounded-xl border border-main">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-indigo-600/20 text-indigo-400 rounded-lg flex items-center justify-center">
+            <div className="w-7 h-7 bg-indigo-600/20 text-indigo-600 rounded-lg flex items-center justify-center">
                <i className="fa-solid fa-user text-[10px]"></i>
             </div>
             <div className="overflow-hidden">
@@ -66,7 +65,7 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
         </div>
         <button 
           onClick={logout}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[9px] uppercase tracking-widest border border-rose-500/20"
+          className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 theme-dark:bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white rounded-xl transition-all font-black text-[9px] uppercase tracking-widest border border-rose-200 theme-dark:border-rose-500/30"
         >
           <i className="fa-solid fa-power-off text-[10px]"></i> Logout
         </button>
@@ -77,14 +76,14 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
 
 const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50 transition-colors duration-300">
       {[
         { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
         { id: 'Masters', icon: 'fa-database', label: 'Data' },
         { id: 'Reports', icon: 'fa-chart-pie', label: 'Bills' },
         { id: 'Settings', icon: 'fa-gear', label: 'Config' }
       ].map(tab => (
-        <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-400' : 'text-muted'}`}>
+        <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-600' : 'text-muted'}`}>
           <i className={`fa-solid fa-${tab.icon} text-sm`}></i>
           <span className="text-[8px] mt-1 font-bold uppercase">{tab.label}</span>
         </button>
@@ -98,11 +97,12 @@ const MainContent: React.FC = () => {
   const [activeView, setView] = useState<View>('Dashboard');
   const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
 
+  // Sync theme with body class
   useEffect(() => {
-    if (settings.theme === 'light') {
-      document.body.classList.add('theme-light');
+    if (settings.theme === 'dark') {
+      document.body.classList.add('theme-dark');
     } else {
-      document.body.classList.remove('theme-light');
+      document.body.classList.remove('theme-dark');
     }
   }, [settings.theme]);
 
@@ -138,7 +138,7 @@ const MainContent: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-app text-main overflow-x-hidden">
+    <div className="min-h-screen bg-app text-main overflow-x-hidden transition-colors duration-300">
       <div className="no-print">
         {activeTable ? (
           <PosView onBack={() => setActiveTable(null)} onPrint={handlePrint} />
@@ -146,13 +146,13 @@ const MainContent: React.FC = () => {
           <div className="md:pl-64 pb-20 md:pb-0">
             <Sidebar activeView={activeView} setView={setView} />
             
-            <header className="bg-sidebar border-b border-main p-3 sticky top-0_z-10 flex justify-between items-center md:hidden">
+            <header className="bg-sidebar border-b border-main p-3 sticky top-0 z-10 flex justify-between items-center md:hidden transition-colors duration-300">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm"><i className="fa-solid fa-cloud"></i></div>
                 <h1 className="text-sm font-black text-main tracking-tight uppercase">Zesta-POS</h1>
               </div>
               <div className="flex items-center gap-3">
-                 <div className="flex items-center gap-1.5 bg-card-alt px-2 py-1 rounded-full border border-main">
+                 <div className="flex items-center gap-1.5 bg-app px-2 py-1 rounded-full border border-main">
                     <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
                     <span className="text-[8px] font-black text-muted uppercase">{isSyncing ? 'SYNC' : 'LIVE'}</span>
                  </div>
@@ -165,92 +165,105 @@ const MainContent: React.FC = () => {
               {activeView === 'Masters' && <Masters />}
               {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
-                <div className="py-4">
+                <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="bg-card rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl mx-auto border border-main">
                     <h2 className="text-lg font-black mb-6 flex items-center gap-3 text-main uppercase tracking-wider">
-                       <i className="fa-solid fa-gears text-indigo-400"></i> Business Configuration
+                       <i className="fa-solid fa-gears text-indigo-600"></i> Business Configuration
                     </h2>
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div 
-                          onClick={() => setSettings({...settings, invoiceFormat: 1})}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 1 ? 'border-indigo-500 bg-indigo-500/10' : 'border-main bg-card-alt'}`}
-                        >
-                           <p className="text-[10px] font-black text-muted uppercase mb-1">Format 1</p>
-                           <p className="text-xs font-bold text-main">TAX INVOICE</p>
-                           <p className="text-[9px] text-muted mt-1 uppercase font-black">Standard GST format</p>
-                        </div>
-                        <div 
-                          onClick={() => setSettings({...settings, invoiceFormat: 2})}
-                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 2 ? 'border-amber-500 bg-amber-500/10' : 'border-main bg-card-alt'}`}
-                        >
-                           <p className="text-[10px] font-black text-muted uppercase mb-1">Format 2</p>
-                           <p className="text-xs font-bold text-main">ESTIMATE</p>
-                           <p className="text-[9px] text-muted mt-1 uppercase font-black">GST Features Removed</p>
-                        </div>
-                      </div>
-
+                    
+                    <div className="space-y-8">
+                      {/* Theme Section */}
                       <div className="space-y-4">
-                        <label className="block text-[10px] font-black text-muted uppercase tracking-widest">Color Theme</label>
+                        <label className="block text-[10px] font-black text-muted uppercase tracking-widest pl-1">Appearance & Interface</label>
                         <div className="grid grid-cols-2 gap-4">
                           <button 
                             onClick={() => setSettings({...settings, theme: 'light'})}
-                            className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${settings.theme === 'light' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500' : 'border-main bg-card-alt text-muted'}`}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${settings.theme === 'light' ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-md' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
                           >
-                            <i className="fa-solid fa-sun text-sm"></i> Light Mode
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all ${settings.theme === 'light' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white border border-main text-slate-400 group-hover:text-indigo-600'}`}>
+                              <i className="fa-solid fa-sun"></i>
+                            </div>
+                            <span className="font-black text-[10px] uppercase tracking-widest">Light Mode</span>
                           </button>
+                          
                           <button 
                             onClick={() => setSettings({...settings, theme: 'dark'})}
-                            className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 font-black text-[10px] uppercase transition-all ${settings.theme === 'dark' ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500' : 'border-main bg-card-alt text-muted'}`}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${settings.theme === 'dark' ? 'border-indigo-600 bg-indigo-500/10 text-indigo-400 shadow-md' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
                           >
-                            <i className="fa-solid fa-moon text-sm"></i> Dark Mode
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all ${settings.theme === 'dark' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-800 border border-main text-slate-500 group-hover:text-indigo-400'}`}>
+                              <i className="fa-solid fa-moon"></i>
+                            </div>
+                            <span className="font-black text-[10px] uppercase tracking-widest">Dark Mode</span>
                           </button>
                         </div>
                       </div>
 
+                      {/* Invoice Format */}
+                      <div className="space-y-4">
+                        <label className="block text-[10px] font-black text-muted uppercase tracking-widest pl-1">Print Style</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div 
+                            onClick={() => setSettings({...settings, invoiceFormat: 1})}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 1 ? 'border-indigo-600 bg-indigo-50 text-indigo-600' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
+                          >
+                             <p className="text-[10px] font-black uppercase mb-1 opacity-60 tracking-tighter">Option 01</p>
+                             <p className="text-xs font-black">TAX INVOICE</p>
+                             <p className="text-[9px] mt-1 uppercase font-bold opacity-50">Standard Billing</p>
+                          </div>
+                          <div 
+                            onClick={() => setSettings({...settings, invoiceFormat: 2})}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 2 ? 'border-amber-500 bg-amber-50 text-amber-600' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
+                          >
+                             <p className="text-[10px] font-black uppercase mb-1 opacity-60 tracking-tighter">Option 02</p>
+                             <p className="text-xs font-black">ESTIMATE</p>
+                             <p className="text-[9px] mt-1 uppercase font-bold opacity-50">Simplified Bill</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Business Info */}
                       <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Restaurant Name</label>
-                          <input className="w-full p-3 bg-[#fdf9d1] theme-light:bg-white rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
+                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Restaurant Name</label>
+                          <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Address</label>
-                          <textarea className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
+                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Address</label>
+                          <textarea className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">Phone</label>
-                            <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Phone</label>
+                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">GSTIN</label>
-                            <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
+                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">GSTIN</label>
+                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
                           </div>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-muted mb-1.5 uppercase tracking-widest">FSSAI License No.</label>
-                          <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
                         </div>
                       </div>
 
-                      <div className="p-4 bg-card-alt rounded-xl border border-main space-y-3">
-                        <label className="block text-[10px] font-bold text-muted uppercase tracking-widest">Payment QR Config (UPI)</label>
-                        <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 border border-slate-200 font-bold text-sm outline-none focus:ring-2 ring-indigo-500" value={settings.upiId || ''} placeholder="e.g., store@upi" onChange={e => setSettings({...settings, upiId: e.target.value})} />
-                        <div className="flex flex-col gap-2 pt-1">
+                      <div className="p-5 bg-indigo-50 theme-dark:bg-indigo-500/5 rounded-2xl border border-indigo-100 theme-dark:border-indigo-500/20 space-y-4">
+                        <label className="block text-[10px] font-black text-indigo-600 uppercase tracking-widest">Payment QR Config</label>
+                        <div className="relative">
+                          <input className="w-full pl-10 pr-4 py-3 bg-white theme-dark:bg-slate-900 rounded-xl text-main font-bold text-sm border border-indigo-200 theme-dark:border-indigo-500/30 outline-none focus:ring-2 ring-indigo-500/50" value={settings.upiId || ''} placeholder="store@upi" onChange={e => setSettings({...settings, upiId: e.target.value})} />
+                          <i className="fa-solid fa-qrcode absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400"></i>
+                        </div>
+                        <div className="flex flex-col gap-3">
                           {[
                             { key: 'printQrCode', label: 'Print Scan-to-Pay QR on Bill' },
-                            { key: 'printGstSummary', label: 'Print GST HSN/Tax Summary' }
+                            { key: 'printGstSummary', label: 'Print GST HSN Summary' }
                           ].map(opt => (
                             <label key={opt.key} className={`flex items-center gap-3 cursor-pointer group ${settings.invoiceFormat === 2 ? 'opacity-30 pointer-events-none' : ''}`}>
-                              <input type="checkbox" disabled={settings.invoiceFormat === 2} checked={settings[opt.key as keyof typeof settings] as boolean} onChange={e => setSettings({...settings, [opt.key]: e.target.checked})} className="w-4 h-4 accent-indigo-500" />
-                              <span className="text-[10px] font-bold text-muted uppercase tracking-widest group-hover:text-main transition-colors">{opt.label}</span>
+                              <input type="checkbox" disabled={settings.invoiceFormat === 2} checked={settings[opt.key as keyof typeof settings] as boolean} onChange={e => setSettings({...settings, [opt.key]: e.target.checked})} className="w-4 h-4 accent-indigo-600 rounded-md" />
+                              <span className="text-[10px] font-black text-muted uppercase tracking-widest group-hover:text-indigo-600 transition-colors">{opt.label}</span>
                             </label>
                           ))}
                         </div>
                       </div>
 
-                      <button onClick={saveSettings} className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-black shadow-lg hover:bg-indigo-500 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-[11px]">
-                        <i className="fa-solid fa-cloud-arrow-up"></i> Save & Sync Settings
+                      <button onClick={saveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[11px] hover:scale-[1.01] active:scale-[0.98]">
+                        <i className="fa-solid fa-cloud-arrow-up"></i> Save & Sync All Settings
                       </button>
                     </div>
                   </div>

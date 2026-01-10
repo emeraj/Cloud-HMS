@@ -215,15 +215,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300">
       <div className="flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main">
         <div className="flex items-center gap-3 mb-4">
-          <button onClick={onBack} className="p-2.5 bg-card-alt rounded-xl text-muted hover:text-white border border-main hover:border-indigo-500 transition-all shadow-lg active:scale-95">
+          <button onClick={onBack} className="p-2.5 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95">
             <i className="fa-solid fa-arrow-left text-xs"></i>
           </button>
           <div className="flex-1 relative group">
-            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-400 transition-colors text-xs"></i>
+            <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-xs"></i>
             <input 
               type="text" 
               placeholder="Search dishes..." 
-              className="w-full pr-10 pl-10 py-2.5 rounded-xl bg-card-alt text-main focus:border-indigo-500 outline-none border border-main text-xs font-bold shadow-inner" 
+              className="w-full pr-10 pl-10 py-2.5 rounded-xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-xs font-bold shadow-sm" 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
             />
@@ -233,7 +233,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1.5 no-scrollbar">
           <button 
             onClick={() => setSelectedGroupId('all')} 
-            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-card-alt border-main text-muted hover:text-white'}`}
+            className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
           >
             All Items
           </button>
@@ -241,7 +241,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <button 
               key={g.id} 
               onClick={() => setSelectedGroupId(g.id)} 
-              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-card-alt border-main text-muted hover:text-white'}`}
+              className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
             >
               {g.name}
             </button>
@@ -253,18 +253,18 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <div 
               key={item.id} 
               onClick={() => addToCart(item)} 
-              className="bg-[#161d31] theme-light:bg-white rounded-2xl border border-main/40 flex flex-col overflow-hidden active:scale-95 cursor-pointer hover:border-indigo-500/50 transition-all group"
+              className="bg-card rounded-2xl border border-main flex flex-col overflow-hidden active:scale-95 cursor-pointer hover:border-indigo-500/50 transition-all group shadow-sm hover:shadow-md"
             >
-              <div className="relative aspect-[4/3] w-full bg-[#0f172a] overflow-hidden">
+              <div className="relative aspect-[4/3] w-full bg-slate-100 overflow-hidden">
                 {item.imageUrl ? (
                   <img src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={item.name} />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center opacity-10">
+                  <div className="w-full h-full flex items-center justify-center opacity-20">
                     <i className="fa-solid fa-utensils text-2xl"></i>
                   </div>
                 )}
                 <div className="absolute top-2 left-2">
-                  <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border shadow-md backdrop-blur-md ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-400 bg-emerald-500/20' : 'border-rose-500/50 text-rose-400 bg-rose-500/20'}`}>
+                  <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-md border shadow-sm backdrop-blur-md ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-600 bg-emerald-50' : 'border-rose-500/50 text-rose-600 bg-rose-50'}`}>
                     {item.foodType}
                   </span>
                 </div>
@@ -274,8 +274,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                   {item.name}
                 </h3>
                 <div className="flex justify-between items-center mt-auto">
-                  <span className="text-indigo-400 font-black text-[12px]">₹{item.price}</span>
-                  <div className="w-6 h-6 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-md">
+                  <span className="text-indigo-600 font-black text-[12px]">₹{item.price}</span>
+                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
                     <i className="fa-solid fa-plus text-[8px]"></i>
                   </div>
                 </div>
@@ -285,11 +285,11 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      <div className="w-full md:w-[320px] bg-sidebar flex flex-col border-l border-main overflow-hidden shadow-lg">
-        <div className="p-3 border-b border-main bg-card-alt/30 space-y-2.5">
+      <div className="w-full md:w-[320px] bg-sidebar flex flex-col border-l border-main overflow-hidden shadow-sm">
+        <div className="p-3 border-b border-main bg-slate-50 space-y-2.5">
           <div className="flex justify-between items-center">
             <h2 className="text-[9px] font-black text-main uppercase tracking-widest">Live Cart</h2>
-            <div className="bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
+            <div className="bg-indigo-50 border border-indigo-100 text-indigo-600 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">
               Table {currentTable?.number}
             </div>
           </div>
@@ -297,7 +297,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           <div className="grid grid-cols-1 gap-1.5">
             <div className="relative group">
               <select 
-                className="w-full pl-8 pr-4 py-2 bg-app rounded-xl text-[10px] font-bold text-main border border-main outline-none appearance-none cursor-pointer focus:border-indigo-500" 
+                className="w-full pl-8 pr-4 py-2 bg-card rounded-xl text-[10px] font-bold text-main border border-main outline-none appearance-none cursor-pointer focus:border-indigo-500" 
                 value={selectedCaptain} 
                 onChange={(e) => {
                   setSelectedCaptain(e.target.value);
@@ -314,7 +314,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
               <input 
                 type="text"
                 placeholder="Cust. Name"
-                className="w-full pl-8 pr-4 py-2 bg-app rounded-xl text-[10px] font-bold text-main border border-main outline-none placeholder:text-muted focus:border-indigo-500"
+                className="w-full pl-8 pr-4 py-2 bg-card rounded-xl text-[10px] font-bold text-main border border-main outline-none placeholder:text-muted focus:border-indigo-500"
                 value={customerName}
                 onChange={(e) => {
                   setCustomerName(e.target.value);
@@ -326,21 +326,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-app/20">
+        <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-slate-50/50">
           {cartItems.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-10">
+            <div className="h-full flex flex-col items-center justify-center opacity-20">
               <i className="fa-solid fa-cart-shopping text-2xl mb-2"></i>
               <p className="text-[9px] font-black uppercase tracking-widest">Empty</p>
             </div>
           ) : (
             cartItems.map(item => (
-              <div key={item.id} className="bg-card p-2.5 rounded-2xl border border-white/5 shadow-md">
+              <div key={item.id} className="bg-card p-2.5 rounded-2xl border border-main shadow-sm">
                 <div className="flex justify-between text-[11px] font-bold text-main uppercase mb-1.5">
                   <span className="flex-1 pr-2 truncate">{item.name}</span>
-                  <span className="text-indigo-400 whitespace-nowrap">₹{(item.price * item.quantity).toFixed(1)}</span>
+                  <span className="text-indigo-600 whitespace-nowrap">₹{(item.price * item.quantity).toFixed(1)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 bg-app p-0.5 rounded-lg border border-main">
+                  <div className="flex items-center gap-1.5 bg-slate-50 p-0.5 rounded-lg border border-main">
                     <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 bg-card rounded-md border border-main flex items-center justify-center text-[10px] font-black text-main">-</button>
                     <span className="w-4 text-center text-[10px] font-bold text-main">{item.quantity}</span>
                     <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 bg-card rounded-md border border-main flex items-center justify-center text-[10px] font-black text-main">+</button>
@@ -354,7 +354,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           )}
         </div>
 
-        <div className="p-4 bg-card-alt border-t border-main">
+        <div className="p-4 bg-card border-t border-main">
           <div className="grid grid-cols-3 gap-2 mb-4">
              {(['Cash', 'UPI', 'Card'] as const).map(mode => (
                <button 
@@ -363,7 +363,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                   setPaymentMode(mode);
                   syncCartToCloud(cartItems, selectedCaptain, customerName, mode);
                 }}
-                className={`py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${paymentMode === mode ? 'bg-indigo-600 border-indigo-500 text-white shadow-md' : 'bg-app border-main text-muted'}`}
+                className={`py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${paymentMode === mode ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-slate-50 border-main text-muted'}`}
                >
                  {mode}
                </button>
@@ -374,7 +374,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <div className="flex justify-between"><span>Base Amount</span><span className="text-main">₹{totals.subTotal.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total Taxes</span><span className="text-main">₹{totals.taxAmount.toFixed(2)}</span></div>
             <div className="flex justify-between items-baseline pt-2 mt-2 border-t border-main">
-              <span className="text-indigo-400 font-black text-[10px]">Net Payable</span>
+              <span className="text-indigo-600 font-black text-[10px]">Net Payable</span>
               <span className="text-xl font-black text-main tracking-tight">₹{totals.totalAmount.toFixed(2)}</span>
             </div>
           </div>
@@ -383,7 +383,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <button 
               onClick={handleBill} 
               disabled={cartItems.length === 0} 
-              className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
+              className="w-full py-3 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-md disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
             >
               <i className="fa-solid fa-receipt text-xs"></i> Print Bill
             </button>
@@ -391,7 +391,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
               <button 
                 onClick={handleKOT} 
                 disabled={cartItems.length === 0} 
-                className="py-2.5 bg-app text-main rounded-xl text-[9px] font-black uppercase border border-main flex items-center justify-center gap-1.5 hover:border-orange-500/50 hover:text-orange-400 active:scale-[0.98]"
+                className="py-2.5 bg-slate-100 text-main rounded-xl text-[9px] font-black uppercase border border-main flex items-center justify-center gap-1.5 hover:border-orange-500/50 hover:text-orange-600 active:scale-[0.98]"
               >
                 <i className="fa-solid fa-fire text-orange-500 text-[10px]"></i> KOT
               </button>
