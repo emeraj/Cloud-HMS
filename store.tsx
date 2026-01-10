@@ -93,7 +93,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     gstin: '',
     thankYouMessage: 'Visit Us Again!',
     printQrCode: true,
-    printGstSummary: true
+    printGstSummary: true,
+    invoiceFormat: 1
   });
 
   const [activeTable, setActiveTable] = useState<string | null>(null);

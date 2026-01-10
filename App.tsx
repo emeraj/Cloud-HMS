@@ -138,7 +138,7 @@ const MainContent: React.FC = () => {
           <div className="md:pl-64 pb-20 md:pb-0">
             <Sidebar activeView={activeView} setView={setView} />
             
-            <header className="bg-[#1e293b] border-b border-slate-700 p-3 sticky top-0 z-10 flex justify-between items-center md:hidden">
+            <header className="bg-[#1e293b] border-b border-slate-700 p-3 sticky top-0_z-10 flex justify-between items-center md:hidden">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm"><i className="fa-solid fa-cloud"></i></div>
                 <h1 className="text-sm font-black text-white tracking-tight uppercase">Zesta-POS</h1>
@@ -163,6 +163,25 @@ const MainContent: React.FC = () => {
                        <i className="fa-solid fa-gears text-indigo-400"></i> Business Configuration
                     </h2>
                     <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div 
+                          onClick={() => setSettings({...settings, invoiceFormat: 1})}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 1 ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 bg-[#0f172a]'}`}
+                        >
+                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Format 1</p>
+                           <p className="text-xs font-bold text-white">TAX INVOICE</p>
+                           <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">Standard GST format</p>
+                        </div>
+                        <div 
+                          onClick={() => setSettings({...settings, invoiceFormat: 2})}
+                          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${settings.invoiceFormat === 2 ? 'border-amber-500 bg-amber-500/10' : 'border-slate-700 bg-[#0f172a]'}`}
+                        >
+                           <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Format 2</p>
+                           <p className="text-xs font-bold text-white">ESTIMATE</p>
+                           <p className="text-[9px] text-slate-500 mt-1 uppercase font-black">GST Features Removed</p>
+                        </div>
+                      </div>
+
                       <div>
                         <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase tracking-widest">Restaurant Name</label>
                         <input className="w-full p-3 bg-[#fdf9d1] rounded-xl text-slate-900 font-bold text-sm border-none outline-none focus:ring-2 ring-indigo-500" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
@@ -194,8 +213,8 @@ const MainContent: React.FC = () => {
                             { key: 'printQrCode', label: 'Print Scan-to-Pay QR on Bill' },
                             { key: 'printGstSummary', label: 'Print GST HSN/Tax Summary' }
                           ].map(opt => (
-                            <label key={opt.key} className="flex items-center gap-3 cursor-pointer group">
-                              <input type="checkbox" checked={settings[opt.key as keyof typeof settings] as boolean} onChange={e => setSettings({...settings, [opt.key]: e.target.checked})} className="w-4 h-4 accent-indigo-500" />
+                            <label key={opt.key} className={`flex items-center gap-3 cursor-pointer group ${settings.invoiceFormat === 2 ? 'opacity-30 pointer-events-none' : ''}`}>
+                              <input type="checkbox" disabled={settings.invoiceFormat === 2} checked={settings[opt.key as keyof typeof settings] as boolean} onChange={e => setSettings({...settings, [opt.key]: e.target.checked})} className="w-4 h-4 accent-indigo-500" />
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">{opt.label}</span>
                             </label>
                           ))}

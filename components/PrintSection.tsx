@@ -77,6 +77,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     hour12: true
   });
 
+  const isEstimate = settings.invoiceFormat === 2;
+
   const upiUrl = settings.upiId 
     ? `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${order.totalAmount.toFixed(2)}&cu=INR&tn=BILL_${order.id.slice(-4)}`
     : '';
@@ -108,29 +110,31 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <h1 className="text-[13px] font-black tracking-tight mb-0.5">{settings.name}</h1>
             <p className="text-[8px] whitespace-pre-line leading-none px-2">{settings.address}</p>
             {settings.fssai && <p className="text-[8px] font-bold mt-0.5">FSSAI: {settings.fssai}</p>}
-            {settings.gstin && <p className="text-[8px] font-bold">GSTIN: {settings.gstin}</p>}
+            {!isEstimate && settings.gstin && <p className="text-[8px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
           <div className="border-t border-black border-dashed my-1"></div>
-          <div className="text-center font-black text-[11px] py-0.5">TAX INVOICE</div>
+          <div className="text-center font-black text-[11px] py-0.5 uppercase tracking-widest">
+            {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
+          </div>
           <div className="border-t border-black border-dashed my-1"></div>
 
           <div className="space-y-0.5 mb-1.5 px-0.5">
             <div className="flex justify-between">
-              <span>Bill No: INV-{order.id.slice(-6).toUpperCase()}</span>
-              <span>Date: {formattedDate}</span>
+              <span>{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST' : 'INV'}-{order.id.slice(-6).toUpperCase()}</span>
+              <span>DATE: {formattedDate}</span>
             </div>
             <div className="flex justify-between">
-              <span>Cust: {order.customerName || 'Walk-in'}</span>
-              <span>Time: {formattedTime}</span>
+              <span>CUST: {order.customerName || 'WALK-IN'}</span>
+              <span>TIME: {formattedTime}</span>
             </div>
             <div className="flex justify-between">
-              <span>Table: {table?.number || 'N/A'}</span>
-              <span>Capt: {captain?.name || 'N/A'}</span>
+              <span>TABLE: {table?.number || 'N/A'}</span>
+              <span>CAPT: {captain?.name || 'N/A'}</span>
             </div>
             <div className="flex justify-between">
-              <span>Cashier: {order.cashierName || 'Admin'}</span>
-              <span>Mode: {order.paymentMode || 'Cash'}</span>
+              <span>CASHIER: {order.cashierName || 'ADMIN'}</span>
+              <span>MODE: {order.paymentMode || 'CASH'}</span>
             </div>
           </div>
 
@@ -139,10 +143,10 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <table className="w-full text-left mb-1.5">
             <thead>
               <tr className="border-b border-black border-dashed">
-                <th className="py-1 font-black text-left w-[45%]">Item</th>
-                <th className="py-1 text-center font-black w-[15%]">Qty</th>
-                <th className="py-1 text-right font-black w-[20%]">Rate</th>
-                <th className="py-1 text-right font-black w-[20%]">Amount</th>
+                <th className="py-1 font-black text-left w-[45%]">ITEM</th>
+                <th className="py-1 text-center font-black w-[15%]">QTY</th>
+                <th className="py-1 text-right font-black w-[20%]">RATE</th>
+                <th className="py-1 text-right font-black w-[20%]">AMOUNT</th>
               </tr>
             </thead>
             <tbody>
@@ -161,13 +165,15 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="space-y-0.5 mb-2 px-1 text-[9px]">
             <div className="flex justify-between">
-              <span>Subtotal:</span>
+              <span>SUBTOTAL:</span>
               <span>{order.subTotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Total GST:</span>
-              <span>{order.taxAmount.toFixed(2)}</span>
-            </div>
+            {!isEstimate && (
+              <div className="flex justify-between">
+                <span>TOTAL GST:</span>
+                <span>{order.taxAmount.toFixed(2)}</span>
+              </div>
+            )}
           </div>
 
           <div className="border-y border-black border-dashed py-2 mb-3 flex justify-between items-center px-1">
@@ -175,7 +181,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <span className="text-[14px] font-black">₹{order.totalAmount.toFixed(2)}</span>
           </div>
 
-          {settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
+          {!isEstimate && settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
             <div className="mb-4">
               <div className="text-center font-black text-[8px] mb-1">GST Summary</div>
               <table className="w-full text-[8px] border-collapse border-y border-black border-dashed">
@@ -201,9 +207,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {settings.printQrCode && qrCodeImg && order.paymentMode === 'UPI' && (
+          {settings.printQrCode && qrCodeImg && (order.paymentMode === 'UPI' || isEstimate) && (
             <div className="text-center mb-4">
-              <p className="text-[8px] font-black mb-2">Scan to Pay using UPI</p>
+              <p className="text-[8px] font-black mb-2">SCAN TO PAY USING UPI</p>
               <img src={qrCodeImg} alt="Payment QR" className="mx-auto w-28 h-28 mb-1" />
               <p className="text-[8px] font-bold">{settings.upiId}</p>
             </div>
@@ -211,8 +217,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="text-center space-y-1 mt-4">
             <p className="font-bold text-[9px]">{settings.thankYouMessage}</p>
-            <p className="text-[8px]">Contact: {settings.phone}</p>
-            <div className="mt-4 opacity-40 text-[6px] italic">*** End of Invoice ***</div>
+            <p className="text-[8px]">CONTACT: {settings.phone}</p>
+            <div className="mt-4 opacity-40 text-[6px] italic">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
         </div>
       ) : (
