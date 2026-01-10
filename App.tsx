@@ -12,8 +12,8 @@ type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
 const ScrollingFooter: React.FC = () => {
   return (
-    <div className="no-print fixed bottom-0 left-0 right-0 md:left-64 bg-sidebar border-t border-main py-1 px-4 z-[45] overflow-hidden select-none transition-colors duration-300">
-      <div className="animate-marquee-ltr text-[10px] font-black text-muted uppercase tracking-[0.2em]">
+    <div className="no-print fixed bottom-0 left-0 right-0 md:left-64 bg-red-600 border-t border-red-700 py-1.5 px-4 z-[45] overflow-hidden select-none transition-colors duration-300 shadow-[0_-4px_10px_rgba(220,38,38,0.2)]">
+      <div className="animate-marquee-ltr text-[11px] font-black text-white uppercase tracking-[0.15em]">
         Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com
       </div>
     </div>
@@ -36,7 +36,7 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
           <i className="fa-solid fa-cloud"></i>
         </div>
         <div>
-          <h1 className="text-xl font-black text-main tracking-tight leading-none">Zesta-<span className="text-indigo-600">POS</span></h1>
+          <h1 className="text-xl font-black text-main tracking-tight leading-none">Cloud-<span className="text-indigo-600">HMS</span></h1>
           <div className="flex items-center gap-1.5 mt-1">
             <div className={`w-1.5 h-1.5 rounded-full ${isSyncing ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
             <span className="text-[8px] font-black text-muted uppercase tracking-widest">{isSyncing ? 'Syncing...' : 'Cloud Live'}</span>
@@ -86,7 +86,7 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
 
 const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
   return (
-    <div className="md:hidden fixed bottom-[22px] left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50 transition-colors duration-300">
+    <div className="md:hidden fixed bottom-[22px] left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50 transition-colors duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
       {[
         { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
         { id: 'Masters', icon: 'fa-database', label: 'Data' },
@@ -159,7 +159,7 @@ const MainContent: React.FC = () => {
             <header className="bg-sidebar border-b border-main p-3 sticky top-0 z-10 flex justify-between items-center md:hidden transition-colors duration-300">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-sm"><i className="fa-solid fa-cloud"></i></div>
-                <h1 className="text-sm font-black text-main tracking-tight uppercase">Zesta-POS</h1>
+                <h1 className="text-sm font-black text-main tracking-tight uppercase">Cloud-HMS</h1>
               </div>
               <div className="flex items-center gap-3">
                  <div className="flex items-center gap-1.5 bg-app px-2 py-1 rounded-full border border-main">
@@ -208,7 +208,27 @@ const MainContent: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Business Info and other settings omitted for brevity, remaining as before */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Restaurant Name</label>
+                          <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Address</label>
+                          <textarea className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Phone</label>
+                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">GSTIN</label>
+                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
+                          </div>
+                        </div>
+                      </div>
+
                       <button onClick={saveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[11px] hover:scale-[1.01] active:scale-[0.98]">
                         <i className="fa-solid fa-cloud-arrow-up"></i> Save & Sync All Settings
                       </button>

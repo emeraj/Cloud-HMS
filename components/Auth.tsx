@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   createUserWithEmailAndPassword, 
@@ -51,7 +50,7 @@ const Auth: React.FC = () => {
             <i className="fa-solid fa-cloud"></i>
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">
-            Zesta-<span className="text-indigo-600">POS</span>
+            Cloud-<span className="text-indigo-600">HMS</span>
           </h1>
           <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">
             {isLogin ? 'Professional Management' : 'System Onboarding'}
@@ -89,7 +88,7 @@ const Auth: React.FC = () => {
               <input
                 required
                 type="email"
-                placeholder="admin@zestapos.com"
+                placeholder="admin@cloudhms.com"
                 className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:border-indigo-500 focus:bg-white focus:ring-4 ring-indigo-500/5 outline-none transition-all placeholder:text-slate-400"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -132,14 +131,14 @@ const Auth: React.FC = () => {
             onClick={() => setIsLogin(!isLogin)}
             className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-colors py-2"
           >
-            {isLogin ? "Need a restaurant account? Register" : "Already registered? Access Login"}
+            {isLogin ? "Need an account? Register" : "Already registered? Access Login"}
           </button>
         </div>
       </div>
 
       <div className="fixed bottom-6 text-center w-full">
          <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">
-            &copy; 2025 Zesta-POS Cloud Systems
+            &copy; 2025 Cloud-HMS Cloud Systems
          </p>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { 
@@ -20,7 +19,7 @@ import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings } from '.
 const firebaseConfig = {
   apiKey: "AIzaSyC6FGS4MYHqYBGa_LGq9yfNrbzp-gKrhn8",
   authDomain: "cloud-hms-c9424.firebaseapp.com",
-  projectId: "cloud-hms-c9424",
+projectId: "cloud-hms-c9424",
   storageBucket: "cloud-hms-c9424.firebasestorage.app",
   messagingSenderId: "760530870938",
   appId: "1:760530870938:web:3f981d2556f5167a357523"
@@ -87,7 +86,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [captains, setCaptains] = useState<Captain[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>({
-    name: 'Zesta Garden Restaurant',
+    name: 'Cloud-HMS Garden Restaurant',
     address: '123 Food Street, Pune',
     phone: '+91 9876543210',
     gstin: '',
