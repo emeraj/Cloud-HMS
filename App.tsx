@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import Dashboard from './components/Dashboard';
@@ -178,63 +179,88 @@ const MainContent: React.FC = () => {
               {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
                 <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="bg-card rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl mx-auto border border-main">
-                    <h2 className="text-lg font-black mb-6 flex items-center gap-3 text-main uppercase tracking-wider">
-                       <i className="fa-solid fa-gears text-indigo-600"></i> Business Configuration
+                  <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
+                    <h2 className="text-base md:text-xl font-black mb-8 flex items-center gap-3 text-white uppercase tracking-wider">
+                       <i className="fa-solid fa-gears text-indigo-400"></i> BUSINESS CONFIGURATION
                     </h2>
                     
-                    <div className="space-y-8">
-                      {/* Theme Section */}
-                      <div className="space-y-4">
-                        <label className="block text-[10px] font-black text-muted uppercase tracking-widest pl-1">Appearance & Interface</label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <button 
-                            onClick={() => setSettings({...settings, theme: 'light'})}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${settings.theme === 'light' ? 'border-indigo-600 bg-indigo-50 text-indigo-600 shadow-md' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
-                          >
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all ${settings.theme === 'light' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white border border-main text-slate-400 group-hover:text-indigo-600'}`}>
-                              <i className="fa-solid fa-sun"></i>
-                            </div>
-                            <span className="font-black text-[10px] uppercase tracking-widest">Light Mode</span>
-                          </button>
-                          
-                          <button 
-                            onClick={() => setSettings({...settings, theme: 'dark'})}
-                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all group ${settings.theme === 'dark' ? 'border-indigo-600 bg-indigo-500/10 text-indigo-400 shadow-md' : 'border-main bg-app/30 text-muted hover:border-slate-400'}`}
-                          >
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl transition-all ${settings.theme === 'dark' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-800 border border-main text-slate-500 group-hover:text-indigo-400'}`}>
-                              <i className="fa-solid fa-moon"></i>
-                            </div>
-                            <span className="font-black text-[10px] uppercase tracking-widest">Dark Mode</span>
-                          </button>
+                    <div className="space-y-6">
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">RESTAURANT NAME</label>
+                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">ADDRESS</label>
+                        <textarea className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner resize-none" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">PHONE</label>
+                          <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">GSTIN</label>
+                          <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Restaurant Name</label>
-                          <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Address</label>
-                          <textarea className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" rows={2} value={settings.address} onChange={e => setSettings({...settings, address: e.target.value})} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">Phone</label>
-                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.phone} onChange={e => setSettings({...settings, phone: e.target.value})} />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] font-black text-muted mb-1.5 uppercase tracking-widest pl-1">GSTIN</label>
-                            <input className="w-full p-3.5 bg-app border border-main rounded-xl text-main font-bold text-sm outline-none focus:ring-2 ring-indigo-500/50" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
-                          </div>
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">FSSAI LICENSE NO.</label>
+                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
+                      </div>
+
+                      <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-4">
+                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">PAYMENT QR CONFIG (UPI)</label>
+                        <input 
+                          className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
+                          placeholder="merchant@upi"
+                          value={settings.upiId || ''} 
+                          onChange={e => setSettings({...settings, upiId: e.target.value})} 
+                        />
+                        <div className="space-y-3 pt-2">
+                          <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative">
+                              <input type="checkbox" className="sr-only" checked={settings.printQrCode} onChange={e => setSettings({...settings, printQrCode: e.target.checked})} />
+                              <div className={`w-5 h-5 rounded border transition-all ${settings.printQrCode ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-700 border-slate-600'}`}>
+                                {settings.printQrCode && <i className="fa-solid fa-check text-[10px] text-white absolute inset-0 flex items-center justify-center"></i>}
+                              </div>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">PRINT SCAN-TO-PAY QR ON BILL</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative">
+                              <input type="checkbox" className="sr-only" checked={settings.printGstSummary} onChange={e => setSettings({...settings, printGstSummary: e.target.checked})} />
+                              <div className={`w-5 h-5 rounded border transition-all ${settings.printGstSummary ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-700 border-slate-600'}`}>
+                                {settings.printGstSummary && <i className="fa-solid fa-check text-[10px] text-white absolute inset-0 flex items-center justify-center"></i>}
+                              </div>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">PRINT GST HSN/TAX SUMMARY</span>
+                          </label>
                         </div>
                       </div>
 
-                      <button onClick={saveSettings} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 uppercase tracking-widest text-[11px] hover:scale-[1.01] active:scale-[0.98]">
-                        <i className="fa-solid fa-cloud-arrow-up"></i> Save & Sync All Settings
+                      <button onClick={saveSettings} className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black shadow-2xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[11px] hover:scale-[1.01] active:scale-[0.98]">
+                        <i className="fa-solid fa-cloud-arrow-up"></i> SAVE & SYNC SETTINGS
                       </button>
                     </div>
+                  </div>
+
+                  {/* Theme Selection - Moved below as secondary settings */}
+                  <div className="max-w-3xl mx-auto mt-8 grid grid-cols-2 gap-4 px-4 md:px-0">
+                    <button 
+                      onClick={() => setSettings({...settings, theme: 'light'})}
+                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'light' ? 'bg-white border-indigo-500 text-indigo-600' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                    >
+                      <i className="fa-solid fa-sun mr-2"></i> Light Mode
+                    </button>
+                    <button 
+                      onClick={() => setSettings({...settings, theme: 'dark'})}
+                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'dark' ? 'bg-slate-800 border-indigo-500 text-indigo-400' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                    >
+                      <i className="fa-solid fa-moon mr-2"></i> Dark Mode
+                    </button>
                   </div>
                 </div>
               )}
