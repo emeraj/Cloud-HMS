@@ -81,22 +81,22 @@ const Dashboard: React.FC = () => {
           
           {/* Status Pills - Legend */}
           <div className="flex flex-wrap gap-1.5 md:gap-2">
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 cursor-default">
               <div className="w-1 h-1 bg-slate-400 rounded-full"></div>
               <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Free</span>
             </div>
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 cursor-default">
               <div className="w-1 h-1 bg-red-600 rounded-full animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]"></div>
               <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Busy</span>
             </div>
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200">
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-slate-200 cursor-default">
               <div className="w-1 h-1 bg-amber-500 rounded-full"></div>
               <span className="text-[7px] md:text-[8px] font-black text-slate-900 uppercase tracking-widest">Bill</span>
             </div>
           </div>
         </div>
 
-        {/* Tables Grid - Dynamic Columns */}
+        {/* Tables Grid - Mobile Columns: 4, Desktop Columns: 10 */}
         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 md:gap-2.5 pb-2">
           {sortedTables.map(table => (
             <div 
@@ -104,12 +104,12 @@ const Dashboard: React.FC = () => {
               onClick={() => setActiveTable(table.id)}
               className={`
                 relative aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-200 border group
-                ${table.status === 'Available' ? 'bg-slate-50 border-slate-200 hover:border-cyan-500/50 hover:bg-cyan-50' : ''}
-                ${table.status === 'Occupied' ? 'bg-red-50 border-red-500 text-red-700 shadow-sm' : ''}
-                ${table.status === 'Billing' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-sm' : ''}
+                ${table.status === 'Available' ? 'bg-slate-50 border-slate-200 hover:border-cyan-500/50 hover:bg-cyan-50 shadow-sm' : ''}
+                ${table.status === 'Occupied' ? 'bg-red-50 border-red-500 text-red-700 shadow-md ring-1 ring-red-200' : ''}
+                ${table.status === 'Billing' ? 'bg-amber-50 border-amber-300 text-amber-600 shadow-md ring-1 ring-amber-100' : ''}
               `}
             >
-              <div className={`mb-1 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-105 ${
+              <div className={`mb-1 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg transition-all duration-200 group-hover:scale-110 ${
                 table.status === 'Available' ? 'bg-slate-100 text-slate-400 group-hover:text-cyan-500' :
                 table.status === 'Occupied' ? 'bg-red-600 text-white shadow-sm' :
                 'bg-amber-100 text-amber-500'
@@ -118,11 +118,13 @@ const Dashboard: React.FC = () => {
               </div>
               
               <div className="text-center">
-                <span className={`font-black text-xs md:text-sm tracking-tight ${table.status === 'Available' ? 'text-slate-400 group-hover:text-main' : 'text-main'}`}>{table.number}</span>
-                <div className={`text-[5px] md:text-[6px] uppercase font-black tracking-widest opacity-80 ${
+                <span className={`font-black text-sm md:text-lg tracking-tighter block leading-none mb-0.5 ${table.status === 'Available' ? 'text-slate-500 group-hover:text-main' : 'text-slate-900'}`}>
+                  {table.number}
+                </span>
+                <div className={`text-[5px] md:text-[7px] uppercase font-black tracking-widest ${
                   table.status === 'Available' ? 'text-slate-400' : 
-                  table.status === 'Occupied' ? 'text-red-600' : 
-                  'text-amber-600'
+                  table.status === 'Occupied' ? 'text-red-700' : 
+                  'text-amber-700'
                 }`}>
                   {table.status.slice(0, 4)}
                 </div>
@@ -130,10 +132,10 @@ const Dashboard: React.FC = () => {
               
               {/* Status Light Overlay */}
               <div className="absolute top-1.5 right-1.5">
-                <div className={`w-1 h-1 md:w-1.5 md:h-1.5 rounded-full ${
+                <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full border border-white/50 ${
                   table.status === 'Available' ? 'bg-slate-300' :
-                  table.status === 'Occupied' ? 'bg-red-600 animate-pulse shadow-[0_0_5px_rgba(220,38,38,0.5)]' :
-                  'bg-amber-500'
+                  table.status === 'Occupied' ? 'bg-red-600 animate-pulse shadow-[0_0_8px_rgba(220,38,38,0.7)]' :
+                  'bg-amber-500 shadow-[0_0_5px_rgba(245,158,11,0.5)]'
                 }`}></div>
               </div>
             </div>

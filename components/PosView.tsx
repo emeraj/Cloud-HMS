@@ -216,40 +216,49 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   return (
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300 relative">
-      {/* Menu Side (Visible if mobileView is 'menu' or on desktop) */}
+      {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
-        <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-          <button onClick={onBack} className="p-2 md:p-2.5 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95">
-            <i className="fa-solid fa-arrow-left text-xs"></i>
-          </button>
-          <div className="flex-1 relative group">
+        
+        {/* Row 1: Search dishes field (Full width) */}
+        <div className="mb-2 md:mb-3">
+          <div className="relative group">
             <i className="fa-solid fa-magnifying-glass absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-[10px] md:text-xs"></i>
             <input 
               type="text" 
               placeholder="Search dishes..." 
-              className="w-full pr-8 pl-9 md:pr-10 md:pl-10 py-2 md:py-2.5 rounded-xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-[10px] md:text-xs font-bold shadow-sm" 
+              className="w-full pr-8 pl-9 md:pr-10 md:pl-10 py-2.5 md:py-3 rounded-xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-[10px] md:text-xs font-bold shadow-sm" 
               value={searchQuery} 
               onChange={(e) => setSearchQuery(e.target.value)} 
             />
           </div>
         </div>
 
-        <div className="flex gap-1.5 mb-3 md:mb-4 overflow-x-auto pb-1.5 no-scrollbar">
+        {/* Row 2: Back Arrow (under search) and Categories */}
+        <div className="flex items-center gap-2 mb-3 md:mb-4">
           <button 
-            onClick={() => setSelectedGroupId('all')} 
-            className={`px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
+            onClick={onBack} 
+            className="flex-shrink-0 w-9 h-9 md:w-10 md:h-10 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95 flex items-center justify-center"
           >
-            All Items
+            <i className="fa-solid fa-arrow-left text-xs"></i>
           </button>
-          {groups.map(g => (
+          
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 items-center pb-0.5">
             <button 
-              key={g.id} 
-              onClick={() => setSelectedGroupId(g.id)} 
-              className={`px-3 md:px-4 py-1.5 md:py-2 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
+              onClick={() => setSelectedGroupId('all')} 
+              className={`px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
             >
-              {g.name}
+              All Items
             </button>
-          ))}
+            {groups.map(g => (
+              <button 
+                key={g.id} 
+                onClick={() => setSelectedGroupId(g.id)} 
+                className={`px-3 md:px-4 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 overflow-y-auto pr-1 pb-24 md:pb-20 custom-scrollbar">
@@ -289,7 +298,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      {/* Cart Side (Visible if mobileView is 'cart' or on desktop) */}
+      {/* Cart Side */}
       <div className={`w-full md:w-[320px] bg-sidebar flex flex-col border-l border-main overflow-hidden shadow-sm ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-3 border-b border-main bg-card-alt space-y-2.5">
           <div className="flex justify-between items-center">
