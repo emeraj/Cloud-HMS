@@ -49,16 +49,16 @@
     .text-main { color: var(--text-main); }
     .text-muted { color: var(--text-muted); }
 
-    /* Marquee Animation - Slowed down to 60s for professional readability */
+    /* Seamless Marquee Animation - 0 to -50% for duplicated content */
     @keyframes marquee-ltr {
-      0% { transform: translateX(100%); }
-      100% { transform: translateX(-100%); }
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
 
     .animate-marquee-ltr {
       display: inline-block;
       white-space: nowrap;
-      animation: marquee-ltr 60s linear infinite;
+      animation: marquee-ltr 40s linear infinite;
       will-change: transform;
     }
 

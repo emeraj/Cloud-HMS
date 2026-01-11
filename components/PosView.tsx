@@ -393,28 +393,30 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
+            {/* KOT Button - Now Large and Prominent */}
             <button 
-              onClick={handleBill} 
+              onClick={handleKOT} 
               disabled={cartItems.length === 0} 
-              className="w-full py-2.5 md:py-3 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-widest shadow-md disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
+              className="w-full py-4 md:py-5 bg-orange-600 text-white rounded-2xl md:rounded-[2.5rem] font-black uppercase text-[11px] md:text-[13px] tracking-[0.15em] shadow-xl shadow-orange-600/20 disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:bg-orange-500"
             >
-              <i className="fa-solid fa-receipt text-xs"></i> Print Bill
+              <i className="fa-solid fa-fire text-lg md:text-xl"></i> SEND KOT
             </button>
-            <div className="grid grid-cols-2 gap-2 pb-2 md:pb-0">
+            
+            <div className="grid grid-cols-2 gap-2.5 pb-2 md:pb-0">
               <button 
-                onClick={handleKOT} 
+                onClick={handleBill} 
                 disabled={cartItems.length === 0} 
-                className="py-2 md:py-2.5 bg-app text-main rounded-xl text-[8px] md:text-[9px] font-black uppercase border border-main flex items-center justify-center gap-1.5 hover:border-orange-500/50 hover:text-orange-600 active:scale-[0.98]"
+                className="py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-widest shadow-md disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
               >
-                <i className="fa-solid fa-fire text-orange-500 text-[10px]"></i> KOT
+                <i className="fa-solid fa-receipt text-xs"></i> Print Bill
               </button>
               <button 
                 onClick={handleSettle} 
                 disabled={existingOrder?.status !== 'Billed'} 
-                className="py-2 md:py-2.5 bg-amber-600 text-white rounded-xl text-[8px] md:text-[9px] font-black uppercase flex items-center justify-center gap-1.5 shadow-md hover:bg-amber-500 active:scale-[0.98] disabled:opacity-30"
+                className="py-3 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[8px] md:text-[9px] font-black uppercase flex items-center justify-center gap-1.5 shadow-md hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-30"
               >
-                <i className="fa-solid fa-circle-check text-[10px]"></i> Settle
+                <i className="fa-solid fa-circle-check text-[10px]"></i> Settle Order
               </button>
             </div>
           </div>

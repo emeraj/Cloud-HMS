@@ -225,7 +225,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
         <div className="text-center flex flex-col items-stretch">
           <div className="border-b border-black border-dashed pb-2 mb-2">
             <h1 className="text-[12px] font-black">KITCHEN ORDER TICKET</h1>
-            <h2 className="text-[16px] font-black mt-1">KOT #{order.kotCount + 1}</h2>
+            <h2 className="text-[18px] font-black mt-1">KOT #{order.kotCount + 1}</h2>
           </div>
           <div className="flex justify-between font-bold text-[10px] mb-2 px-1">
             <span>TABLE: {table?.number || 'N/A'}</span>
@@ -244,13 +244,13 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
              <tbody>
                {order.items.map((item, idx) => (
                  <tr key={idx} className="border-b border-black border-dotted">
-                    <td className="py-2 font-bold">{item.name}</td>
-                    <td className="py-2 text-center font-black text-[14px]">{item.quantity}</td>
+                    <td className="py-2 font-black text-[12px] leading-tight">{item.name}</td>
+                    <td className="py-2 text-center font-black text-[18px]">{item.quantity}</td>
                  </tr>
                ))}
              </tbody>
           </table>
-          <p className="text-[8px] mt-4 opacity-75">--- End of KOT ---</p>
+          <p className="text-[8px] mt-4 opacity-75 italic">--- End of Order ---</p>
         </div>
       )}
     </div>

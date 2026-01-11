@@ -12,12 +12,14 @@ import { Order, SystemUser } from './types';
 type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
 const ScrollingFooter: React.FC = () => {
+  const content = "Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com";
+  const spacer = "\u00A0".repeat(24);
+  const repeatedText = `${content}${spacer}${content}${spacer}`;
+
   return (
     <div className="no-print fixed bottom-0 left-0 right-0 md:left-64 bg-red-600 border-t border-red-700 h-7 flex items-center z-[45] overflow-hidden select-none transition-colors duration-300 shadow-[0_-2px_10px_rgba(0,0,0,0.15)]">
-      <div className="animate-marquee-ltr text-[10px] md:text-[11px] font-black text-white uppercase tracking-[0.15em] whitespace-nowrap">
-        Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        Developed by: M. Soft India | Contact: 9890072651 | Visit: msoftindia.com
+      <div className="animate-marquee-ltr text-[10px] md:text-[11px] font-black text-white uppercase tracking-[0.2em] whitespace-nowrap">
+        {repeatedText}
       </div>
     </div>
   );
@@ -110,7 +112,7 @@ const MainContent: React.FC = () => {
   const [activeView, setView] = useState<View>('Dashboard');
   const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
 
-  // Local state for adding/editing system users
+  // Local state for User Management
   const [editingSystemUser, setEditingSystemUser] = useState<Partial<SystemUser> | null>(null);
 
   useEffect(() => {
@@ -139,22 +141,18 @@ const MainContent: React.FC = () => {
   const handleSaveSystemUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSystemUser?.name || !editingSystemUser?.password) return;
-    
     const userToSave: SystemUser = {
       id: editingSystemUser.id || `u-${Date.now()}`,
       name: editingSystemUser.name,
       role: editingSystemUser.role || 'Operator',
       password: editingSystemUser.password
     };
-    
     await upsert("system_users", userToSave);
     setEditingSystemUser(null);
   };
 
   const handleDeleteSystemUser = async (id: string) => {
-    if (confirm("Delete this user?")) {
-      await remove("system_users", id);
-    }
+    if (confirm("Delete this user account?")) await remove("system_users", id);
   };
 
   if (!user) return <Auth />;
@@ -232,12 +230,11 @@ const MainContent: React.FC = () => {
                         <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
                       </div>
 
-                      {/* Master Passwords for Legacy Login / Overrides */}
                       <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-5">
                         <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Master Role Passwords</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
-                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Admin Password</label>
+                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Admin Password</label>
                             <input 
                               type="password"
                               className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
@@ -247,7 +244,7 @@ const MainContent: React.FC = () => {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Operator Password</label>
+                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Operator Password</label>
                             <input 
                               type="password"
                               className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
@@ -303,86 +300,64 @@ const MainContent: React.FC = () => {
                        </h2>
                        <button 
                         onClick={() => setEditingSystemUser({ name: '', role: 'Operator', password: '' })}
-                        className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-indigo-500/20"
+                        className="bg-indigo-600 hover:bg-indigo-500 transition-all text-white px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-indigo-500/30 shadow-lg"
                        >
-                         Add New User
+                          Add Staff User
                        </button>
                     </div>
 
-                    {/* Add/Edit User Form */}
                     {editingSystemUser && (
-                      <div className="mb-8 p-6 bg-[#111827] rounded-3xl border border-indigo-500/30 animate-in zoom-in-95 duration-200">
+                      <div className="mb-8 p-6 bg-[#111827] rounded-[2.5rem] border border-indigo-500/30 animate-in zoom-in-95 duration-200">
                         <form onSubmit={handleSaveSystemUser} className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Full Name</label>
-                              <input 
-                                required
-                                className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
-                                value={editingSystemUser.name} 
-                                onChange={e => setEditingSystemUser({...editingSystemUser, name: e.target.value})} 
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">System Role</label>
-                              <select 
-                                className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
-                                value={editingSystemUser.role} 
-                                onChange={e => setEditingSystemUser({...editingSystemUser, role: e.target.value as any})}
-                              >
-                                <option value="Operator">Operator</option>
-                                <option value="Admin">Admin</option>
-                              </select>
-                            </div>
+                             <div className="space-y-1">
+                                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Display Name</label>
+                                <input required className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner" value={editingSystemUser.name} onChange={e => setEditingSystemUser({...editingSystemUser, name: e.target.value})} />
+                             </div>
+                             <div className="space-y-1">
+                                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Access Role</label>
+                                <select required className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner appearance-none" value={editingSystemUser.role} onChange={e => setEditingSystemUser({...editingSystemUser, role: e.target.value as any})}>
+                                   <option value="Operator">Operator</option>
+                                   <option value="Admin">Admin</option>
+                                </select>
+                             </div>
                           </div>
                           <div className="space-y-1">
-                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Login Password</label>
-                            <input 
-                              required
-                              type="password"
-                              className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
-                              placeholder="Security Password"
-                              value={editingSystemUser.password} 
-                              onChange={e => setEditingSystemUser({...editingSystemUser, password: e.target.value})} 
-                            />
+                             <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Login Password</label>
+                             <input required type="password" className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner" placeholder="Enter password" value={editingSystemUser.password} onChange={e => setEditingSystemUser({...editingSystemUser, password: e.target.value})} />
                           </div>
-                          <div className="flex gap-2">
-                            <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">
-                              Save User Account
-                            </button>
-                            <button type="button" onClick={() => setEditingSystemUser(null)} className="px-6 py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest">
-                              Cancel
-                            </button>
+                          <div className="flex gap-3">
+                             <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg">Save Profile</button>
+                             <button type="button" onClick={() => setEditingSystemUser(null)} className="px-8 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancel</button>
                           </div>
                         </form>
                       </div>
                     )}
 
-                    <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                        {systemUsers.length === 0 ? (
-                         <div className="py-10 text-center opacity-20">
+                         <div className="col-span-full py-12 text-center opacity-20">
                             <i className="fa-solid fa-users text-4xl mb-3 text-slate-400"></i>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">No registered users</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">No registered system users</p>
                          </div>
                        ) : (
                          systemUsers.map(u => (
-                           <div key={u.id} className="bg-[#111827] p-4 rounded-2xl border border-white/5 flex items-center justify-between group transition-all hover:border-indigo-500/30">
+                           <div key={u.id} className="bg-[#111827] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
                               <div className="flex items-center gap-4">
-                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm ${u.role === 'Admin' ? 'bg-rose-500/20 text-rose-500' : 'bg-cyan-500/20 text-cyan-500'}`}>
+                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg ${u.role === 'Admin' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20'}`}>
                                     <i className={`fa-solid ${u.role === 'Admin' ? 'fa-user-shield' : 'fa-user'}`}></i>
                                  </div>
                                  <div>
                                     <h4 className="text-white font-black text-xs uppercase tracking-tight">{u.name}</h4>
-                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{u.role}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                       <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-md ${u.role === 'Admin' ? 'bg-rose-500 text-white' : 'bg-cyan-600 text-white'}`}>{u.role}</span>
+                                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">Pass: ****</span>
+                                    </div>
                                  </div>
                               </div>
                               <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <button onClick={() => setEditingSystemUser(u)} className="w-8 h-8 rounded-lg bg-slate-800 text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
-                                    <i className="fa-solid fa-pen text-[10px]"></i>
-                                 </button>
-                                 <button onClick={() => handleDeleteSystemUser(u.id)} className="w-8 h-8 rounded-lg bg-slate-800 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all">
-                                    <i className="fa-solid fa-trash text-[10px]"></i>
-                                 </button>
+                                 <button onClick={() => setEditingSystemUser(u)} className="w-9 h-9 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white shadow-sm transition-all"><i className="fa-solid fa-pen text-[10px]"></i></button>
+                                 <button onClick={() => handleDeleteSystemUser(u.id)} className="w-9 h-9 rounded-xl bg-slate-800 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white shadow-sm transition-all"><i className="fa-solid fa-trash text-[10px]"></i></button>
                               </div>
                            </div>
                          ))
@@ -390,20 +365,9 @@ const MainContent: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Theme Selector */}
                   <div className="max-w-3xl mx-auto mt-8 grid grid-cols-2 gap-4 px-4 md:px-0">
-                    <button 
-                      onClick={() => setSettings({...settings, theme: 'light'})}
-                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'light' ? 'bg-white border-indigo-500 text-indigo-600 shadow-md' : 'bg-white/5 border-white/10 text-slate-500'}`}
-                    >
-                      <i className="fa-solid fa-sun mr-2"></i> Light Mode
-                    </button>
-                    <button 
-                      onClick={() => setSettings({...settings, theme: 'dark'})}
-                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'dark' ? 'bg-slate-800 border-indigo-500 text-indigo-400 shadow-md' : 'bg-white/5 border-white/10 text-slate-500'}`}
-                    >
-                      <i className="fa-solid fa-moon mr-2"></i> Dark Mode
-                    </button>
+                    <button onClick={() => setSettings({...settings, theme: 'light'})} className={`py-4 rounded-[2rem] border-2 font-black uppercase text-[10px] tracking-widest transition-all ${settings.theme === 'light' ? 'bg-white border-indigo-500 text-indigo-600 shadow-xl' : 'bg-white/5 border-white/10 text-slate-500'}`}><i className="fa-solid fa-sun mr-2"></i> Light Theme</button>
+                    <button onClick={() => setSettings({...settings, theme: 'dark'})} className={`py-4 rounded-[2rem] border-2 font-black uppercase text-[10px] tracking-widest transition-all ${settings.theme === 'dark' ? 'bg-slate-800 border-indigo-500 text-indigo-400 shadow-xl' : 'bg-white/5 border-white/10 text-slate-500'}`}><i className="fa-solid fa-moon mr-2"></i> Dark Theme</button>
                   </div>
                 </div>
               )}
@@ -413,12 +377,7 @@ const MainContent: React.FC = () => {
           </div>
         )}
       </div>
-      <PrintSection 
-        order={printData?.order || null} 
-        type={printData?.type || 'BILL'} 
-        reportOrders={printData?.reportOrders}
-        reportDate={printData?.reportDate}
-      />
+      <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} reportOrders={printData?.reportOrders} reportDate={printData?.reportDate} />
     </div>
   );
 };

@@ -105,7 +105,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribes: (() => void)[] = [];
     const createListener = (colName: string, setter: (data: any[]) => void) => {
       return onSnapshot(collection(db, colName), snapshot => {
-        setter(snapshot.docs.map(doc => doc.data()));
+        setter(snapshot.docs.map(doc => doc.data() as any));
       }, e => console.error(e));
     };
     unsubscribes.push(createListener("tables", setTables));
@@ -116,7 +116,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     unsubscribes.push(createListener("orders", setOrders));
     unsubscribes.push(createListener("system_users", setSystemUsers));
     unsubscribes.push(onSnapshot(doc(db, "config", "business_settings"), snap => {
-      if (snap.exists()) setSettings(snap.data() as BusinessSettings);
+      if (snap.exists()) setSettings(prev => ({ ...prev, ...snap.data() } as BusinessSettings));
       setIsLoading(false);
     }));
     return () => unsubscribes.forEach(unsub => unsub());
