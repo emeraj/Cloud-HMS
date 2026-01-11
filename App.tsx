@@ -7,7 +7,7 @@ import Masters from './components/Masters';
 import Reports from './components/Reports';
 import PrintSection from './components/PrintSection';
 import Auth from './components/Auth';
-import { Order, SystemUser } from './types';
+import { Order } from './types';
 
 type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
@@ -26,7 +26,7 @@ const ScrollingFooter: React.FC = () => {
 };
 
 const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
-  const { logout, user, isSyncing, settings } = useApp();
+  const { logout, user, isSyncing } = useApp();
   const menuItems = [
     { id: 'Dashboard', icon: 'fa-solid fa-chart-line', label: 'Dashboard' },
     { id: 'Masters', icon: 'fa-solid fa-database', label: 'Master Data' },
@@ -108,12 +108,9 @@ const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({
 };
 
 const MainContent: React.FC = () => {
-  const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, remove, isSyncing, systemUsers } = useApp();
+  const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
   const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
-
-  // Local state for User Management
-  const [editingSystemUser, setEditingSystemUser] = useState<Partial<SystemUser> | null>(null);
 
   useEffect(() => {
     if (settings.theme === 'dark') {
@@ -136,23 +133,6 @@ const MainContent: React.FC = () => {
   const saveSettings = async () => {
     await upsert("config", settings);
     alert('Cloud Settings Updated Successfully!');
-  };
-
-  const handleSaveSystemUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingSystemUser?.name || !editingSystemUser?.password) return;
-    const userToSave: SystemUser = {
-      id: editingSystemUser.id || `u-${Date.now()}`,
-      name: editingSystemUser.name,
-      role: editingSystemUser.role || 'Operator',
-      password: editingSystemUser.password
-    };
-    await upsert("system_users", userToSave);
-    setEditingSystemUser(null);
-  };
-
-  const handleDeleteSystemUser = async (id: string) => {
-    if (confirm("Delete this user account?")) await remove("system_users", id);
   };
 
   if (!user) return <Auth />;
@@ -289,79 +269,6 @@ const MainContent: React.FC = () => {
                       <button onClick={saveSettings} className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black shadow-2xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 uppercase tracking-[0.2em] text-[11px] hover:scale-[1.01] active:scale-[0.98]">
                         <i className="fa-solid fa-cloud-arrow-up"></i> SAVE & SYNC SETTINGS
                       </button>
-                    </div>
-                  </div>
-
-                  {/* User Management Section */}
-                  <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
-                    <div className="flex justify-between items-center mb-8">
-                       <h2 className="text-base md:text-xl font-black flex items-center gap-3 text-white uppercase tracking-wider">
-                          <i className="fa-solid fa-users-gear text-indigo-400"></i> USER MANAGEMENT
-                       </h2>
-                       <button 
-                        onClick={() => setEditingSystemUser({ name: '', role: 'Operator', password: '' })}
-                        className="bg-indigo-600 hover:bg-indigo-500 transition-all text-white px-5 py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-widest border border-indigo-500/30 shadow-lg"
-                       >
-                          Add Staff User
-                       </button>
-                    </div>
-
-                    {editingSystemUser && (
-                      <div className="mb-8 p-6 bg-[#111827] rounded-[2.5rem] border border-indigo-500/30 animate-in zoom-in-95 duration-200">
-                        <form onSubmit={handleSaveSystemUser} className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="space-y-1">
-                                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Display Name</label>
-                                <input required className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner" value={editingSystemUser.name} onChange={e => setEditingSystemUser({...editingSystemUser, name: e.target.value})} />
-                             </div>
-                             <div className="space-y-1">
-                                <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Access Role</label>
-                                <select required className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner appearance-none" value={editingSystemUser.role} onChange={e => setEditingSystemUser({...editingSystemUser, role: e.target.value as any})}>
-                                   <option value="Operator">Operator</option>
-                                   <option value="Admin">Admin</option>
-                                </select>
-                             </div>
-                          </div>
-                          <div className="space-y-1">
-                             <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Login Password</label>
-                             <input required type="password" className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-bold text-xs outline-none shadow-inner" placeholder="Enter password" value={editingSystemUser.password} onChange={e => setEditingSystemUser({...editingSystemUser, password: e.target.value})} />
-                          </div>
-                          <div className="flex gap-3">
-                             <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg">Save Profile</button>
-                             <button type="button" onClick={() => setEditingSystemUser(null)} className="px-8 py-4 bg-slate-800 text-slate-400 rounded-2xl font-black text-[10px] uppercase tracking-widest">Cancel</button>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {systemUsers.length === 0 ? (
-                         <div className="col-span-full py-12 text-center opacity-20">
-                            <i className="fa-solid fa-users text-4xl mb-3 text-slate-400"></i>
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">No registered system users</p>
-                         </div>
-                       ) : (
-                         systemUsers.map(u => (
-                           <div key={u.id} className="bg-[#111827] p-5 rounded-[2rem] border border-white/5 flex items-center justify-between group hover:border-indigo-500/40 transition-all">
-                              <div className="flex items-center gap-4">
-                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg ${u.role === 'Admin' ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-cyan-500/10 text-cyan-500 border border-cyan-500/20'}`}>
-                                    <i className={`fa-solid ${u.role === 'Admin' ? 'fa-user-shield' : 'fa-user'}`}></i>
-                                 </div>
-                                 <div>
-                                    <h4 className="text-white font-black text-xs uppercase tracking-tight">{u.name}</h4>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                       <span className={`text-[7px] font-black uppercase px-1.5 py-0.5 rounded-md ${u.role === 'Admin' ? 'bg-rose-500 text-white' : 'bg-cyan-600 text-white'}`}>{u.role}</span>
-                                       <span className="text-[7px] text-slate-500 font-bold uppercase tracking-widest">Pass: ****</span>
-                                    </div>
-                                 </div>
-                              </div>
-                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <button onClick={() => setEditingSystemUser(u)} className="w-9 h-9 rounded-xl bg-slate-800 text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white shadow-sm transition-all"><i className="fa-solid fa-pen text-[10px]"></i></button>
-                                 <button onClick={() => handleDeleteSystemUser(u.id)} className="w-9 h-9 rounded-xl bg-slate-800 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white shadow-sm transition-all"><i className="fa-solid fa-trash text-[10px]"></i></button>
-                              </div>
-                           </div>
-                         ))
-                       )}
                     </div>
                   </div>
 

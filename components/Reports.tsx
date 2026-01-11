@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -15,24 +16,30 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
-      const isStatusMatch = o.status === 'Settled' || o.status === 'Billed';
-      return isStatusMatch && orderDate === selectedDate;
-    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      // Include all orders that have a Bill Number assigned for the selected day
+      return o.dailyBillNo && orderDate === selectedDate;
+    }).sort((a, b) => {
+      // Sort by Bill Number descending so the latest is always at top
+      const numA = parseInt(a.dailyBillNo || '0');
+      const numB = parseInt(b.dailyBillNo || '0');
+      return numB - numA;
+    });
   }, [orders, selectedDate]);
 
-  const totalSales = useMemo(() => filteredOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [filteredOrders]);
+  const settledOrders = useMemo(() => filteredOrders.filter(o => o.status === 'Settled' || o.status === 'Billed'), [filteredOrders]);
+  const totalSales = useMemo(() => settledOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [settledOrders]);
 
   const captainStats = useMemo(() => {
     return captains.map(w => {
-      const captainOrders = filteredOrders.filter(o => o.captainId === w.id);
+      const captainOrders = settledOrders.filter(o => o.captainId === w.id);
       const sales = captainOrders.reduce((sum, o) => sum + o.totalAmount, 0);
       return { name: w.name, count: captainOrders.length, sales };
     }).sort((a, b) => b.sales - a.sales);
-  }, [captains, filteredOrders]);
+  }, [captains, settledOrders]);
 
   const itemSummary = useMemo(() => {
     const summary: Record<string, { name: string, quantity: number, revenue: number }> = {};
-    filteredOrders.forEach(order => {
+    settledOrders.forEach(order => {
       order.items.forEach(item => {
         if (!summary[item.menuItemId]) {
           summary[item.menuItemId] = { name: item.name, quantity: 0, revenue: 0 };
@@ -42,7 +49,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
       });
     });
     return Object.values(summary).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredOrders]);
+  }, [settledOrders]);
 
   const handleDeleteOrder = async (orderId: string) => {
     if (confirm("Delete this order record permanently?")) {
@@ -68,12 +75,12 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
       <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-end mb-2">
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Total Sales ({selectedDate})</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Settled Sales ({selectedDate})</p>
             <p className="text-lg font-bold text-emerald-600">₹{totalSales.toFixed(2)}</p>
           </div>
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Orders Count</p>
-            <p className="text-lg font-bold text-slate-800">{filteredOrders.length}</p>
+            <p className="text-lg font-bold text-slate-800">{settledOrders.length}</p>
           </div>
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Top Item Revenue</p>
@@ -96,8 +103,8 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
           </div>
           
           <button 
-            onClick={() => onPrintDayBook?.(filteredOrders, selectedDate)}
-            disabled={filteredOrders.length === 0}
+            onClick={() => onPrintDayBook?.(settledOrders, selectedDate)}
+            disabled={settledOrders.length === 0}
             className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white p-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest self-stretch sm:self-end shadow-md"
           >
             <i className="fa-solid fa-print"></i>
@@ -145,13 +152,16 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                 </thead>
                 <tbody className="bg-white text-[11px]">
                   {filteredOrders.length === 0 ? (
-                    <tr><td colSpan={7} className="p-10 text-center text-slate-400 font-bold uppercase italic tracking-wider">No transaction data for {selectedDate}</td></tr>
+                    <tr><td colSpan={7} className="p-10 text-center text-slate-400 font-bold uppercase italic tracking-wider">No sequence data for {selectedDate}</td></tr>
                   ) : (
                     filteredOrders.map(order => (
                       <tr key={order.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                         <td className="p-3">
                           <div className="font-mono font-black text-indigo-600">#{order.dailyBillNo || order.id.slice(-5)}</div>
-                          <div className={`text-[8px] font-bold uppercase mt-0.5 ${order.status === 'Settled' ? 'text-emerald-600' : 'text-orange-600'}`}>{order.status}</div>
+                          <div className={`text-[8px] font-bold uppercase mt-0.5 ${
+                            order.status === 'Settled' ? 'text-emerald-600' : 
+                            order.status === 'Pending' ? 'text-indigo-500' :
+                            'text-orange-600'}`}>{order.status}</div>
                         </td>
                         <td className="p-3 text-slate-500 font-medium">
                           {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}

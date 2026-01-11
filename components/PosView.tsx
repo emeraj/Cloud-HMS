@@ -51,6 +51,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
+  const getNextBillNo = useCallback(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr) && o.dailyBillNo);
+    const maxNum = todayOrders.reduce((max, o) => {
+      const num = parseInt(o.dailyBillNo || '0');
+      return num > max ? num : max;
+    }, 0);
+    return (maxNum + 1).toString().padStart(5, '0');
+  }, [orders]);
+
   const syncCartToCloud = useCallback(async (
     updatedItems: OrderItem[], 
     captainId: string, 
@@ -65,22 +75,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const totalAmount = subTotal + taxAmount;
 
     let orderId = existingOrder?.id;
-    let dailyBillNo = existingOrder?.dailyBillNo;
+    // We don't generate a bill number here anymore unless it already exists
+    let dailyBillNo = existingOrder?.dailyBillNo || ''; 
 
     if (!orderId) {
       orderId = `ORD-${Date.now()}`;
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
-      const maxNum = todayOrders.reduce((max, o) => {
-        const num = parseInt(o.dailyBillNo || '0');
-        return num > max ? num : max;
-      }, 0);
-      dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
     }
 
     const newOrder: Order = {
       id: orderId,
-      dailyBillNo: dailyBillNo!,
+      dailyBillNo: dailyBillNo,
       tableId: activeTable,
       captainId: captainId,
       items: updatedItems,
@@ -104,7 +108,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         currentOrderId: orderId 
       });
     }
-  }, [activeTable, currentTable, existingOrder, upsert, user, orders]);
+  }, [activeTable, currentTable, existingOrder, upsert, user]);
 
   const addToCart = async (item: MenuItem) => {
     let updatedItems: OrderItem[] = [];
@@ -150,23 +154,24 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleKOT = async () => {
+    let billNo = existingOrder?.dailyBillNo;
+    if (!billNo) {
+      billNo = getNextBillNo();
+    }
+
     if (existingOrder) {
-      const updatedOrder = { ...existingOrder, kotCount: existingOrder.kotCount + 1 };
+      const updatedOrder = { 
+        ...existingOrder, 
+        dailyBillNo: billNo,
+        kotCount: existingOrder.kotCount + 1 
+      };
       await upsert("orders", updatedOrder);
       onPrint('KOT', updatedOrder);
     } else {
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
-      const maxNum = todayOrders.reduce((max, o) => {
-        const num = parseInt(o.dailyBillNo || '0');
-        return num > max ? num : max;
-      }, 0);
-      const dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
-      
       const orderId = `ORD-${Date.now()}`;
       const newOrder: Order = {
         id: orderId,
-        dailyBillNo: dailyBillNo,
+        dailyBillNo: billNo,
         tableId: activeTable!,
         captainId: selectedCaptain,
         items: cartItems,
@@ -185,23 +190,12 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleBill = async () => {
-    let orderId = existingOrder?.id;
-    let dailyBillNo = existingOrder?.dailyBillNo;
-
-    if (!orderId) {
-      orderId = `ORD-${Date.now()}`;
-      const todayStr = new Date().toISOString().split('T')[0];
-      const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr));
-      const maxNum = todayOrders.reduce((max, o) => {
-        const num = parseInt(o.dailyBillNo || '0');
-        return num > max ? num : max;
-      }, 0);
-      dailyBillNo = (maxNum + 1).toString().padStart(5, '0');
-    }
+    let orderId = existingOrder?.id || `ORD-${Date.now()}`;
+    let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
 
     const newOrder: Order = {
       id: orderId,
-      dailyBillNo: dailyBillNo!,
+      dailyBillNo: dailyBillNo,
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: cartItems,

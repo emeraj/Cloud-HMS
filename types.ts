@@ -64,13 +64,6 @@ export interface Order {
   cashierName?: string;
 }
 
-export interface SystemUser {
-  id: string;
-  name: string;
-  role: 'Admin' | 'Operator';
-  password: string;
-}
-
 export interface BusinessSettings {
   name: string;
   address: string;
