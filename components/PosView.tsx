@@ -138,6 +138,17 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
 
+  const updatePrice = (id: string, newPrice: number) => {
+    const updatedItems = cartItems.map(item => {
+      if (item.id === id) {
+        return { ...item, price: newPrice };
+      }
+      return item;
+    });
+    setCartItems(updatedItems);
+    syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
+  };
+
   const handleKOT = async () => {
     if (existingOrder) {
       const updatedOrder = { ...existingOrder, kotCount: existingOrder.kotCount + 1 };
@@ -348,17 +359,29 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
           ) : (
             cartItems.map(item => (
-              <div key={item.id} className="bg-card p-2.5 rounded-2xl border border-main shadow-sm">
-                <div className="flex justify-between text-[10px] md:text-[11px] font-bold text-main uppercase mb-1.5">
-                  <span className="flex-1 pr-2 truncate">{item.name}</span>
-                  <span className="text-indigo-600 theme-dark:text-indigo-400 whitespace-nowrap">₹{(item.price * item.quantity).toFixed(1)}</span>
+              <div key={item.id} className="bg-card p-3 rounded-2xl border border-main shadow-sm">
+                <div className="flex justify-between items-start text-[10px] md:text-[11px] font-bold text-main uppercase mb-2">
+                  <span className="flex-1 pr-2 leading-tight">{item.name}</span>
+                  <span className="text-indigo-600 theme-dark:text-indigo-400 whitespace-nowrap font-black">₹{(item.price * item.quantity).toFixed(1)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-1.5 bg-app p-0.5 rounded-lg border border-main">
+                
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex items-center gap-1 bg-app p-1 rounded-xl border border-main shadow-inner">
+                    <span className="text-[7px] font-black text-muted pl-1 uppercase tracking-tighter">Rate</span>
+                    <input 
+                      type="number" 
+                      className="w-11 bg-transparent border-none text-[10px] font-black text-indigo-600 theme-dark:text-indigo-400 outline-none p-0 focus:ring-0"
+                      value={item.price}
+                      onChange={(e) => updatePrice(item.id, Number(e.target.value))}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-app p-0.5 rounded-lg border border-main ml-auto">
                     <button onClick={() => updateQty(item.id, -1)} className="w-5 h-5 bg-card rounded-md border border-main flex items-center justify-center text-[10px] font-black text-main">-</button>
                     <span className="w-4 text-center text-[10px] font-bold text-main">{item.quantity}</span>
                     <button onClick={() => updateQty(item.id, 1)} className="w-5 h-5 bg-card rounded-md border border-main flex items-center justify-center text-[10px] font-black text-main">+</button>
                   </div>
+                  
                   <button onClick={() => updateQty(item.id, -item.quantity)} className="text-muted hover:text-rose-500 transition-all p-1">
                     <i className="fa-solid fa-trash-can text-[10px]"></i>
                   </button>
@@ -394,7 +417,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            {/* KOT Button - Now Large and Prominent */}
             <button 
               onClick={handleKOT} 
               disabled={cartItems.length === 0} 
