@@ -7,7 +7,7 @@ import Masters from './components/Masters';
 import Reports from './components/Reports';
 import PrintSection from './components/PrintSection';
 import Auth from './components/Auth';
-import { Order } from './types';
+import { Order, SystemUser } from './types';
 
 type View = 'Dashboard' | 'Masters' | 'Reports' | 'Settings';
 
@@ -106,11 +106,13 @@ const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({
 };
 
 const MainContent: React.FC = () => {
-  const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
+  const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, remove, isSyncing, systemUsers } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
   const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
 
-  // Sync theme with body class
+  // Local state for adding/editing system users
+  const [editingSystemUser, setEditingSystemUser] = useState<Partial<SystemUser> | null>(null);
+
   useEffect(() => {
     if (settings.theme === 'dark') {
       document.body.classList.add('theme-dark');
@@ -121,21 +123,38 @@ const MainContent: React.FC = () => {
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
-    setTimeout(() => {
-      window.print();
-    }, 400);
+    setTimeout(() => { window.print(); }, 400);
   };
 
   const handlePrintDayBook = (orders: Order[], date: string) => {
     setPrintData({ type: 'DAYBOOK', reportOrders: orders, reportDate: date });
-    setTimeout(() => {
-      window.print();
-    }, 400);
+    setTimeout(() => { window.print(); }, 400);
   };
 
   const saveSettings = async () => {
     await upsert("config", settings);
     alert('Cloud Settings Updated Successfully!');
+  };
+
+  const handleSaveSystemUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSystemUser?.name || !editingSystemUser?.password) return;
+    
+    const userToSave: SystemUser = {
+      id: editingSystemUser.id || `u-${Date.now()}`,
+      name: editingSystemUser.name,
+      role: editingSystemUser.role || 'Operator',
+      password: editingSystemUser.password
+    };
+    
+    await upsert("system_users", userToSave);
+    setEditingSystemUser(null);
+  };
+
+  const handleDeleteSystemUser = async (id: string) => {
+    if (confirm("Delete this user?")) {
+      await remove("system_users", id);
+    }
   };
 
   if (!user) return <Auth />;
@@ -178,7 +197,9 @@ const MainContent: React.FC = () => {
               {activeView === 'Masters' && <Masters />}
               {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
-                <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                  
+                  {/* Business Configuration Section */}
                   <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
                     <h2 className="text-base md:text-xl font-black mb-8 flex items-center gap-3 text-white uppercase tracking-wider">
                        <i className="fa-solid fa-gears text-indigo-400"></i> BUSINESS CONFIGURATION
@@ -209,6 +230,33 @@ const MainContent: React.FC = () => {
                       <div className="space-y-1">
                         <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">FSSAI LICENSE NO.</label>
                         <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
+                      </div>
+
+                      {/* Master Passwords for Legacy Login / Overrides */}
+                      <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-5">
+                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Master Role Passwords</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Admin Password</label>
+                            <input 
+                              type="password"
+                              className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
+                              placeholder="e.g., 123"
+                              value={settings.adminPassword || ''} 
+                              onChange={e => setSettings({...settings, adminPassword: e.target.value})} 
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Operator Password</label>
+                            <input 
+                              type="password"
+                              className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
+                              placeholder="e.g., 000"
+                              value={settings.operatorPassword || ''} 
+                              onChange={e => setSettings({...settings, operatorPassword: e.target.value})} 
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-4">
@@ -247,17 +295,112 @@ const MainContent: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Theme Selection - Moved below as secondary settings */}
+                  {/* User Management Section */}
+                  <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
+                    <div className="flex justify-between items-center mb-8">
+                       <h2 className="text-base md:text-xl font-black flex items-center gap-3 text-white uppercase tracking-wider">
+                          <i className="fa-solid fa-users-gear text-indigo-400"></i> USER MANAGEMENT
+                       </h2>
+                       <button 
+                        onClick={() => setEditingSystemUser({ name: '', role: 'Operator', password: '' })}
+                        className="bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border border-indigo-500/20"
+                       >
+                         Add New User
+                       </button>
+                    </div>
+
+                    {/* Add/Edit User Form */}
+                    {editingSystemUser && (
+                      <div className="mb-8 p-6 bg-[#111827] rounded-3xl border border-indigo-500/30 animate-in zoom-in-95 duration-200">
+                        <form onSubmit={handleSaveSystemUser} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Full Name</label>
+                              <input 
+                                required
+                                className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
+                                value={editingSystemUser.name} 
+                                onChange={e => setEditingSystemUser({...editingSystemUser, name: e.target.value})} 
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">System Role</label>
+                              <select 
+                                className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
+                                value={editingSystemUser.role} 
+                                onChange={e => setEditingSystemUser({...editingSystemUser, role: e.target.value as any})}
+                              >
+                                <option value="Operator">Operator</option>
+                                <option value="Admin">Admin</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Login Password</label>
+                            <input 
+                              required
+                              type="password"
+                              className="w-full p-3 bg-[#fefce8] border-none rounded-xl text-slate-900 font-bold text-xs outline-none" 
+                              placeholder="Security Password"
+                              value={editingSystemUser.password} 
+                              onChange={e => setEditingSystemUser({...editingSystemUser, password: e.target.value})} 
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button type="submit" className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">
+                              Save User Account
+                            </button>
+                            <button type="button" onClick={() => setEditingSystemUser(null)} className="px-6 py-3 bg-slate-800 text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    <div className="space-y-3">
+                       {systemUsers.length === 0 ? (
+                         <div className="py-10 text-center opacity-20">
+                            <i className="fa-solid fa-users text-4xl mb-3 text-slate-400"></i>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">No registered users</p>
+                         </div>
+                       ) : (
+                         systemUsers.map(u => (
+                           <div key={u.id} className="bg-[#111827] p-4 rounded-2xl border border-white/5 flex items-center justify-between group transition-all hover:border-indigo-500/30">
+                              <div className="flex items-center gap-4">
+                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm ${u.role === 'Admin' ? 'bg-rose-500/20 text-rose-500' : 'bg-cyan-500/20 text-cyan-500'}`}>
+                                    <i className={`fa-solid ${u.role === 'Admin' ? 'fa-user-shield' : 'fa-user'}`}></i>
+                                 </div>
+                                 <div>
+                                    <h4 className="text-white font-black text-xs uppercase tracking-tight">{u.name}</h4>
+                                    <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{u.role}</p>
+                                 </div>
+                              </div>
+                              <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <button onClick={() => setEditingSystemUser(u)} className="w-8 h-8 rounded-lg bg-slate-800 text-indigo-400 flex items-center justify-center hover:bg-indigo-600 hover:text-white transition-all">
+                                    <i className="fa-solid fa-pen text-[10px]"></i>
+                                 </button>
+                                 <button onClick={() => handleDeleteSystemUser(u.id)} className="w-8 h-8 rounded-lg bg-slate-800 text-rose-500 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all">
+                                    <i className="fa-solid fa-trash text-[10px]"></i>
+                                 </button>
+                              </div>
+                           </div>
+                         ))
+                       )}
+                    </div>
+                  </div>
+
+                  {/* Theme Selector */}
                   <div className="max-w-3xl mx-auto mt-8 grid grid-cols-2 gap-4 px-4 md:px-0">
                     <button 
                       onClick={() => setSettings({...settings, theme: 'light'})}
-                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'light' ? 'bg-white border-indigo-500 text-indigo-600' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'light' ? 'bg-white border-indigo-500 text-indigo-600 shadow-md' : 'bg-white/5 border-white/10 text-slate-500'}`}
                     >
                       <i className="fa-solid fa-sun mr-2"></i> Light Mode
                     </button>
                     <button 
                       onClick={() => setSettings({...settings, theme: 'dark'})}
-                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'dark' ? 'bg-slate-800 border-indigo-500 text-indigo-400' : 'bg-white/5 border-white/10 text-slate-500'}`}
+                      className={`py-4 rounded-3xl border-2 font-black uppercase text-[9px] tracking-widest transition-all ${settings.theme === 'dark' ? 'bg-slate-800 border-indigo-500 text-indigo-400 shadow-md' : 'bg-white/5 border-white/10 text-slate-500'}`}
                     >
                       <i className="fa-solid fa-moon mr-2"></i> Dark Mode
                     </button>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { 
@@ -14,12 +15,12 @@ import {
   User, 
   signOut 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings } from './types';
+import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings, SystemUser } from './types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC6FGS4MYHqYBGa_LGq9yfNrbzp-gKrhn8",
   authDomain: "cloud-hms-c9424.firebaseapp.com",
-projectId: "cloud-hms-c9424",
+  projectId: "cloud-hms-c9424",
   storageBucket: "cloud-hms-c9424.firebasestorage.app",
   messagingSenderId: "760530870938",
   appId: "1:760530870938:web:3f981d2556f5167a357523"
@@ -29,20 +30,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 export const auth = getAuth(app);
 
-/**
- * Clean data before sending to Firestore.
- * Firestore rejects 'undefined' values.
- * This function also ensures we don't recurse into circular SDK objects.
- */
 const sanitizeData = (obj: any): any => {
   if (obj === null || obj === undefined) return obj;
-  
-  if (Array.isArray(obj)) {
-    return obj.map(v => sanitizeData(v));
-  }
-
-  // Only recurse if it's a plain object { ... }
-  // This prevents traversing SDK-specific classes like DocumentReference or Query
+  if (Array.isArray(obj)) return obj.map(v => sanitizeData(v));
   if (typeof obj === 'object' && Object.prototype.toString.call(obj) === '[object Object]') {
     return Object.fromEntries(
       Object.entries(obj)
@@ -50,7 +40,6 @@ const sanitizeData = (obj: any): any => {
         .map(([k, v]) => [k, sanitizeData(v)])
     );
   }
-  
   return obj;
 };
 
@@ -63,6 +52,7 @@ interface AppState {
   taxes: Tax[];
   captains: Captain[];
   orders: Order[];
+  systemUsers: SystemUser[];
   settings: BusinessSettings;
   setSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
   activeTable: string | null;
@@ -85,6 +75,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [captains, setCaptains] = useState<Captain[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>({
     name: 'Cloud-HMS Garden Restaurant',
     address: '123 Food Street, Pune',
@@ -94,7 +85,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     printQrCode: true,
     printGstSummary: true,
     invoiceFormat: 1,
-    theme: 'dark'
+    theme: 'dark',
+    adminPassword: '123',
+    operatorPassword: '000'
   });
 
   const [activeTable, setActiveTable] = useState<string | null>(null);
@@ -109,38 +102,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     if (!user) return;
-
     const unsubscribes: (() => void)[] = [];
-
     const createListener = (colName: string, setter: (data: any[]) => void) => {
-      return onSnapshot(collection(db, colName), 
-        (snapshot) => {
-          const data = snapshot.docs.map(doc => doc.data());
-          setter(data as any[]);
-        },
-        (error) => console.error(`Error in ${colName} listener:`, error)
-      );
+      return onSnapshot(collection(db, colName), snapshot => {
+        setter(snapshot.docs.map(doc => doc.data()));
+      }, e => console.error(e));
     };
-
     unsubscribes.push(createListener("tables", setTables));
     unsubscribes.push(createListener("menu", setMenu));
     unsubscribes.push(createListener("groups", setGroups));
     unsubscribes.push(createListener("taxes", setTaxes));
     unsubscribes.push(createListener("waiters", setCaptains)); 
     unsubscribes.push(createListener("orders", setOrders));
-
-    const settingsUnsub = onSnapshot(doc(db, "config", "business_settings"), 
-      (snapshot) => {
-        if (snapshot.exists()) setSettings(snapshot.data() as BusinessSettings);
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error("Error in settings listener:", error);
-        setIsLoading(false);
-      }
-    );
-    unsubscribes.push(settingsUnsub);
-
+    unsubscribes.push(createListener("system_users", setSystemUsers));
+    unsubscribes.push(onSnapshot(doc(db, "config", "business_settings"), snap => {
+      if (snap.exists()) setSettings(snap.data() as BusinessSettings);
+      setIsLoading(false);
+    }));
     return () => unsubscribes.forEach(unsub => unsub());
   }, [user]);
 
@@ -149,7 +127,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsSyncing(true);
     try {
       const docRef = col === "config" ? doc(db, col, "business_settings") : doc(db, col, item.id);
-      // Firestore setDoc expects plain objects, but our sanitize function helps remove 'undefined' fields
       await setDoc(docRef, sanitizeData(item));
     } finally {
       setIsSyncing(false);
@@ -170,7 +147,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, logout, tables, menu, groups, taxes, captains, orders, settings, setSettings,
+      user, logout, tables, menu, groups, taxes, captains, orders, systemUsers, settings, setSettings,
       activeTable, setActiveTable, isLoading, isSyncing, upsert, remove
     }}>
       {children}

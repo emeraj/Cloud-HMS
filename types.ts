@@ -64,6 +64,13 @@ export interface Order {
   cashierName?: string;
 }
 
+export interface SystemUser {
+  id: string;
+  name: string;
+  role: 'Admin' | 'Operator';
+  password: string;
+}
+
 export interface BusinessSettings {
   name: string;
   address: string;
@@ -76,4 +83,6 @@ export interface BusinessSettings {
   printGstSummary: boolean;
   invoiceFormat?: 1 | 2; // 1: Tax Invoice, 2: Estimate
   theme?: 'light' | 'dark';
+  adminPassword?: string;
+  operatorPassword?: string;
 }
