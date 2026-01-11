@@ -26,6 +26,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   
   // Mobile UI state: 'menu' or 'cart'
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Track the cloud data to avoid overwriting local changes if they are identical
   const lastCloudOrderRef = useRef<string | null>(null);
@@ -210,7 +217,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleBillAndSettle = async () => {
-    if (!currentTable) return;
+    if (!currentTable || isMobile) return;
     
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
@@ -450,10 +457,12 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
               <button 
                 onClick={handleBillAndSettle} 
-                disabled={cartItems.length === 0} 
+                disabled={cartItems.length === 0 || isMobile} 
                 className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
+                title={isMobile ? "Billing Restricted on Mobile" : ""}
               >
-                <i className="fa-solid fa-receipt text-xs"></i> PRINT BILL & SETTLE
+                <i className="fa-solid fa-receipt text-xs"></i> 
+                {isMobile ? 'PC Billing Only' : 'PRINT BILL & SETTLE'}
               </button>
             </div>
           </div>
