@@ -13,21 +13,44 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
+  // Reactive filter that updates immediately when 'orders' from store changes
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
-      // Include all orders that have a Bill Number assigned for the selected day
-      return o.dailyBillNo && orderDate === selectedDate;
+      // Show all orders for the selected day in DayBook to ensure live sequence visibility
+      return orderDate === selectedDate;
     }).sort((a, b) => {
-      // Sort by Bill Number descending so the latest is always at top
+      // Prioritize Daily Bill Number, then Timestamp
       const numA = parseInt(a.dailyBillNo || '0');
       const numB = parseInt(b.dailyBillNo || '0');
-      return numB - numA;
+      if (numA !== numB) return numB - numA;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
   }, [orders, selectedDate]);
 
   const settledOrders = useMemo(() => filteredOrders.filter(o => o.status === 'Settled' || o.status === 'Billed'), [filteredOrders]);
-  const totalSales = useMemo(() => settledOrders.reduce((acc, curr) => acc + curr.totalAmount, 0), [settledOrders]);
+  
+  // Real-time stats recalculation
+  const stats = useMemo(() => {
+    const total = settledOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
+    const count = settledOrders.length;
+    
+    const items: Record<string, { name: string, quantity: number, revenue: number }> = {};
+    settledOrders.forEach(order => {
+      order.items.forEach(item => {
+        if (!items[item.menuItemId]) {
+          items[item.menuItemId] = { name: item.name, quantity: 0, revenue: 0 };
+        }
+        items[item.menuItemId].quantity += item.quantity;
+        items[item.menuItemId].revenue += item.price * item.quantity;
+      });
+    });
+    
+    const sortedItems = Object.values(items).sort((a, b) => b.revenue - a.revenue);
+    const topRevenue = sortedItems[0]?.revenue || 0;
+    
+    return { total, count, topRevenue, itemSummary: sortedItems };
+  }, [settledOrders]);
 
   const captainStats = useMemo(() => {
     return captains.map(w => {
@@ -36,20 +59,6 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
       return { name: w.name, count: captainOrders.length, sales };
     }).sort((a, b) => b.sales - a.sales);
   }, [captains, settledOrders]);
-
-  const itemSummary = useMemo(() => {
-    const summary: Record<string, { name: string, quantity: number, revenue: number }> = {};
-    settledOrders.forEach(order => {
-      order.items.forEach(item => {
-        if (!summary[item.menuItemId]) {
-          summary[item.menuItemId] = { name: item.name, quantity: 0, revenue: 0 };
-        }
-        summary[item.menuItemId].quantity += item.quantity;
-        summary[item.menuItemId].revenue += item.price * item.quantity;
-      });
-    });
-    return Object.values(summary).sort((a, b) => b.revenue - a.revenue);
-  }, [settledOrders]);
 
   const handleDeleteOrder = async (orderId: string) => {
     if (confirm("Delete this order record permanently?")) {
@@ -76,15 +85,15 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Settled Sales ({selectedDate})</p>
-            <p className="text-lg font-bold text-emerald-600">₹{totalSales.toFixed(2)}</p>
+            <p className="text-lg font-bold text-emerald-600">₹{stats.total.toFixed(2)}</p>
           </div>
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Orders Count</p>
-            <p className="text-lg font-bold text-slate-800">{settledOrders.length}</p>
+            <p className="text-lg font-bold text-slate-800">{stats.count}</p>
           </div>
           <div className="bg-white p-3.5 rounded-xl border border-main shadow-sm">
             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Top Item Revenue</p>
-            <p className="text-lg font-bold text-indigo-600">₹{itemSummary[0]?.revenue.toFixed(2) || '0.00'}</p>
+            <p className="text-lg font-bold text-indigo-600">₹{stats.topRevenue.toFixed(2)}</p>
           </div>
         </div>
 
@@ -157,7 +166,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                     filteredOrders.map(order => (
                       <tr key={order.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                         <td className="p-3">
-                          <div className="font-mono font-black text-indigo-600">#{order.dailyBillNo || order.id.slice(-5)}</div>
+                          <div className="font-mono font-black text-indigo-600">#{order.dailyBillNo || 'DRAFT'}</div>
                           <div className={`text-[8px] font-bold uppercase mt-0.5 ${
                             order.status === 'Settled' ? 'text-emerald-600' : 
                             order.status === 'Pending' ? 'text-indigo-500' :
@@ -210,10 +219,10 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                   </tr>
                 </thead>
                 <tbody className="bg-white text-[11px]">
-                  {itemSummary.length === 0 ? (
+                  {stats.itemSummary.length === 0 ? (
                     <tr><td colSpan={3} className="p-10 text-center text-slate-400 font-bold uppercase italic tracking-wider">No sales records for {selectedDate}</td></tr>
                   ) : (
-                    itemSummary.map((item, idx) => (
+                    stats.itemSummary.map((item, idx) => (
                       <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
                         <td className="p-3 text-slate-700 font-bold uppercase">{item.name}</td>
                         <td className="p-3 text-center text-indigo-600 font-black">{item.quantity}</td>

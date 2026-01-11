@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
 
@@ -21,21 +21,34 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCaptain, setSelectedCaptain] = useState(existingOrder?.captainId || (captains[0]?.id || ''));
   const [cartItems, setCartItems] = useState<OrderItem[]>(existingOrder?.items || []);
-  
   const [customerName, setCustomerName] = useState(existingOrder?.customerName || '');
   const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card'>(existingOrder?.paymentMode || 'Cash');
   
   // Mobile UI state: 'menu' or 'cart'
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
 
+  // Track the cloud data to avoid overwriting local changes if they are identical
+  const lastCloudOrderRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (existingOrder) {
-      setCartItems(existingOrder.items);
-      setSelectedCaptain(existingOrder.captainId);
-      setCustomerName(existingOrder.customerName || '');
-      setPaymentMode(existingOrder.paymentMode || 'Cash');
+      // Create a signature of the cloud order to check for meaningful changes
+      const cloudSignature = JSON.stringify({
+        items: existingOrder.items,
+        captain: existingOrder.captainId,
+        customer: existingOrder.customerName,
+        payment: existingOrder.paymentMode
+      });
+
+      if (lastCloudOrderRef.current !== cloudSignature) {
+        setCartItems(existingOrder.items);
+        setSelectedCaptain(existingOrder.captainId);
+        setCustomerName(existingOrder.customerName || '');
+        setPaymentMode(existingOrder.paymentMode || 'Cash');
+        lastCloudOrderRef.current = cloudSignature;
+      }
     }
-  }, [existingOrder?.id]);
+  }, [existingOrder]);
 
   const filteredMenu = useMemo(() => {
     return menu.filter(item => {
@@ -75,7 +88,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const totalAmount = subTotal + taxAmount;
 
     let orderId = existingOrder?.id;
-    // We don't generate a bill number here anymore unless it already exists
     let dailyBillNo = existingOrder?.dailyBillNo || ''; 
 
     if (!orderId) {
@@ -98,6 +110,14 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       paymentMode: payMode,
       cashierName: user?.displayName || user?.email?.split('@')[0] || 'Admin'
     };
+
+    // Update ref before sync to prevent echo-update
+    lastCloudOrderRef.current = JSON.stringify({
+      items: updatedItems,
+      captain: captainId,
+      customer: custName,
+      payment: payMode
+    });
 
     await upsert("orders", newOrder);
     
@@ -224,7 +244,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
-        {/* Row 1: Search dishes field (Full width) */}
+        {/* Row 1: Search dishes field */}
         <div className="mb-2 md:mb-3">
           <div className="relative group">
             <i className="fa-solid fa-magnifying-glass absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-[10px] md:text-xs"></i>
@@ -238,7 +258,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
-        {/* Row 2: Back Arrow (under search) and Categories */}
+        {/* Row 2: Back Arrow and Categories */}
         <div className="flex items-center gap-2 mb-3 md:mb-4">
           <button 
             onClick={onBack} 
@@ -439,7 +459,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      {/* Floating Toggle for Mobile */}
       <div className="md:hidden fixed bottom-6 right-6 flex flex-col gap-3 z-50">
         <button 
           onClick={() => setMobileView(mobileView === 'menu' ? 'cart' : 'menu')}
