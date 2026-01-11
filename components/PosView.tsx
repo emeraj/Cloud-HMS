@@ -124,8 +124,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     if (currentTable.currentOrderId !== orderId || currentTable.status === 'Available') {
       await upsert("tables", { 
         ...currentTable, 
-        status: currentStatus === 'Billed' ? 'Billing' : 'Occupied', 
-        currentOrderId: orderId 
+        status: currentStatus === 'Billed' || currentStatus === 'Settled' ? 'Available' : 'Occupied', 
+        currentOrderId: currentStatus === 'Settled' ? undefined : orderId 
       });
     }
   }, [activeTable, currentTable, existingOrder, upsert, user]);
@@ -209,7 +209,9 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     }
   };
 
-  const handleBill = async () => {
+  const handleBillAndSettle = async () => {
+    if (!currentTable) return;
+    
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
 
@@ -219,7 +221,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: cartItems,
-      status: 'Billed',
+      status: 'Settled', // Auto Settle
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       ...totals,
       kotCount: existingOrder?.kotCount || 0,
@@ -227,15 +229,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       paymentMode,
       cashierName: user?.displayName || 'Admin'
     };
-    await upsert("orders", newOrder);
-    await upsert("tables", { ...currentTable!, status: 'Billing', currentOrderId: orderId });
-    onPrint('BILL', newOrder);
-  };
 
-  const handleSettle = async () => {
-    if (!existingOrder || !currentTable) return;
-    await upsert("orders", { ...existingOrder, status: 'Settled', paymentMode, customerName });
-    await upsert("tables", { ...currentTable, status: 'Available', currentOrderId: undefined });
+    // 1. Sync the final settled order
+    await upsert("orders", newOrder);
+    
+    // 2. Free up the table immediately
+    await upsert("tables", { 
+      ...currentTable, 
+      status: 'Available', 
+      currentOrderId: undefined 
+    });
+
+    // 3. Trigger Print
+    onPrint('BILL', newOrder);
+
+    // 4. Return to Floor View
     onBack();
   };
 
@@ -439,20 +447,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
               <i className="fa-solid fa-fire text-lg md:text-xl"></i> SEND KOT
             </button>
             
-            <div className="grid grid-cols-2 gap-2.5 pb-2 md:pb-0">
+            <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
               <button 
-                onClick={handleBill} 
+                onClick={handleBillAndSettle} 
                 disabled={cartItems.length === 0} 
-                className="py-3 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[9px] md:text-[10px] tracking-widest shadow-md disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
+                className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
               >
-                <i className="fa-solid fa-receipt text-xs"></i> Print Bill
-              </button>
-              <button 
-                onClick={handleSettle} 
-                disabled={existingOrder?.status !== 'Billed'} 
-                className="py-3 md:py-4 bg-indigo-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[8px] md:text-[9px] font-black uppercase flex items-center justify-center gap-1.5 shadow-md hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-30"
-              >
-                <i className="fa-solid fa-circle-check text-[10px]"></i> Settle Order
+                <i className="fa-solid fa-receipt text-xs"></i> PRINT BILL & SETTLE
               </button>
             </div>
           </div>
