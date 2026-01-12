@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
@@ -19,14 +18,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCaptain, setSelectedCaptain] = useState(existingOrder?.captainId || (captains[0]?.id || ''));
-  const [cartItems, setCartItems] = useState<OrderItem[]>(existingOrder?.items || []);
-  const [customerName, setCustomerName] = useState(existingOrder?.customerName || '');
-  const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card'>(existingOrder?.paymentMode || 'Cash');
+  const [selectedCaptain, setSelectedCaptain] = useState('');
+  const [cartItems, setCartItems] = useState<OrderItem[]>([]);
+  const [customerName, setCustomerName] = useState('');
+  const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card'>('Cash');
   
-  // Mobile UI state: 'menu' or 'cart'
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Reference to track if the current order was settled by another device
+  const isSettledRef = useRef(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -34,17 +35,24 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Track the cloud data to avoid overwriting local changes if they are identical
   const lastCloudOrderRef = useRef<string | null>(null);
 
+  // Sync component state with database when existingOrder changes (e.g., from another device)
   useEffect(() => {
     if (existingOrder) {
-      // Create a signature of the cloud order to check for meaningful changes
+      // If we see the order is settled in the DB, mark it so we don't re-open the table
+      if (existingOrder.status === 'Settled') {
+        isSettledRef.current = true;
+      } else {
+        isSettledRef.current = false;
+      }
+
       const cloudSignature = JSON.stringify({
         items: existingOrder.items,
         captain: existingOrder.captainId,
         customer: existingOrder.customerName,
-        payment: existingOrder.paymentMode
+        payment: existingOrder.paymentMode,
+        status: existingOrder.status
       });
 
       if (lastCloudOrderRef.current !== cloudSignature) {
@@ -54,8 +62,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         setPaymentMode(existingOrder.paymentMode || 'Cash');
         lastCloudOrderRef.current = cloudSignature;
       }
+    } else if (!existingOrder && currentTable?.status === 'Available') {
+      // Table was cleared by another device
+      setCartItems([]);
+      setSelectedCaptain('');
+      setCustomerName('');
+      lastCloudOrderRef.current = null;
+      isSettledRef.current = false;
     }
-  }, [existingOrder]);
+  }, [existingOrder, currentTable?.status]);
 
   const filteredMenu = useMemo(() => {
     return menu.filter(item => {
@@ -71,13 +86,19 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
+  // Robust Bill Number Logic: Last Bill # + 1
   const getNextBillNo = useCallback(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayOrders = orders.filter(o => o.timestamp.startsWith(todayStr) && o.dailyBillNo);
+    const todayOrders = orders.filter(o => {
+      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
+      return orderDate === todayStr && o.dailyBillNo && o.dailyBillNo !== '';
+    });
+    
     const maxNum = todayOrders.reduce((max, o) => {
       const num = parseInt(o.dailyBillNo || '0');
-      return num > max ? num : max;
+      return isNaN(num) ? max : Math.max(max, num);
     }, 0);
+    
     return (maxNum + 1).toString().padStart(5, '0');
   }, [orders]);
 
@@ -88,18 +109,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     payMode: 'Cash' | 'UPI' | 'Card',
     currentStatus: 'Pending' | 'Billed' | 'Settled' = 'Pending'
   ) => {
-    if (!activeTable || !currentTable) return;
+    // CRITICAL: If table is already available or order is settled, do NOT re-sync/re-open
+    if (!activeTable || !currentTable || isSettledRef.current) return;
+    if (currentTable.status === 'Available' && updatedItems.length === 0) return;
 
     const subTotal = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
     const totalAmount = subTotal + taxAmount;
 
-    let orderId = existingOrder?.id;
+    let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || ''; 
-
-    if (!orderId) {
-      orderId = `ORD-${Date.now()}`;
-    }
 
     const newOrder: Order = {
       id: orderId,
@@ -115,29 +134,31 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       kotCount: existingOrder?.kotCount || 0,
       customerName: custName,
       paymentMode: payMode,
-      cashierName: user?.displayName || user?.email?.split('@')[0] || 'Admin'
+      cashierName: user?.displayName || 'Admin'
     };
 
-    // Update ref before sync to prevent echo-update
     lastCloudOrderRef.current = JSON.stringify({
       items: updatedItems,
       captain: captainId,
       customer: custName,
-      payment: payMode
+      payment: payMode,
+      status: currentStatus
     });
 
     await upsert("orders", newOrder);
     
-    if (currentTable.currentOrderId !== orderId || currentTable.status === 'Available') {
+    // Only update table if it's currently occupied by this order or needs to be marked as occupied
+    if (currentTable.status !== 'Available' || updatedItems.length > 0) {
       await upsert("tables", { 
         ...currentTable, 
-        status: currentStatus === 'Billed' || currentStatus === 'Settled' ? 'Available' : 'Occupied', 
+        status: currentStatus === 'Settled' ? 'Available' : 'Occupied', 
         currentOrderId: currentStatus === 'Settled' ? undefined : orderId 
       });
     }
   }, [activeTable, currentTable, existingOrder, upsert, user]);
 
   const addToCart = async (item: MenuItem) => {
+    if (isSettledRef.current) return;
     let updatedItems: OrderItem[] = [];
     const existing = cartItems.find(i => i.menuItemId === item.id);
     if (existing) {
@@ -158,6 +179,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const updateQty = (id: string, delta: number) => {
+    if (isSettledRef.current) return;
     const updatedItems = cartItems.map(item => {
       if (item.id === id) {
         const newQty = Math.max(0, item.quantity + delta);
@@ -170,6 +192,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const updatePrice = (id: string, newPrice: number) => {
+    if (isSettledRef.current) return;
     const updatedItems = cartItems.map(item => {
       if (item.id === id) {
         return { ...item, price: newPrice };
@@ -181,6 +204,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleKOT = async () => {
+    if (isSettledRef.current) return;
     let billNo = existingOrder?.dailyBillNo;
     if (!billNo) {
       billNo = getNextBillNo();
@@ -190,7 +214,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       const updatedOrder = { 
         ...existingOrder, 
         dailyBillNo: billNo,
-        kotCount: existingOrder.kotCount + 1 
+        kotCount: (existingOrder.kotCount || 0) + 1 
       };
       await upsert("orders", updatedOrder);
       onPrint('KOT', updatedOrder);
@@ -217,7 +241,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleBillAndSettle = async () => {
-    if (!currentTable || isMobile) return;
+    if (!currentTable || isMobile || isSettledRef.current) return;
     
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
@@ -228,7 +252,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: cartItems,
-      status: 'Settled', // Auto Settle
+      status: 'Settled',
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       ...totals,
       kotCount: existingOrder?.kotCount || 0,
@@ -237,20 +261,17 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       cashierName: user?.displayName || 'Admin'
     };
 
-    // 1. Sync the final settled order
-    await upsert("orders", newOrder);
+    // Mark as settled locally first to prevent re-sync loop
+    isSettledRef.current = true;
     
-    // 2. Free up the table immediately
+    await upsert("orders", newOrder);
     await upsert("tables", { 
       ...currentTable, 
       status: 'Available', 
       currentOrderId: undefined 
     });
 
-    // 3. Trigger Print
     onPrint('BILL', newOrder);
-
-    // 4. Return to Floor View
     onBack();
   };
 
@@ -259,7 +280,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
-        {/* Row 1: Search dishes field */}
         <div className="mb-2 md:mb-3">
           <div className="relative group">
             <i className="fa-solid fa-magnifying-glass absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-[10px] md:text-xs"></i>
@@ -273,7 +293,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
-        {/* Row 2: Back Arrow and Categories */}
         <div className="flex items-center gap-2 mb-3 md:mb-4">
           <button 
             onClick={onBack} 
@@ -381,7 +400,14 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar bg-app/20">
-          {cartItems.length === 0 ? (
+          {isSettledRef.current ? (
+            <div className="h-full flex flex-col items-center justify-center opacity-60 text-center p-4">
+              <i className="fa-solid fa-check-double text-4xl mb-4 text-emerald-500"></i>
+              <p className="text-[11px] font-black uppercase tracking-widest text-emerald-600 mb-1">Order Settled</p>
+              <p className="text-[9px] font-bold text-muted">Table cleared by another device.</p>
+              <button onClick={onBack} className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Floor Plan</button>
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center opacity-20">
               <i className="fa-solid fa-cart-shopping text-2xl mb-2"></i>
               <p className="text-[9px] font-black uppercase tracking-widest">Empty</p>
@@ -426,6 +452,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                <button 
                 key={mode} 
                 onClick={() => {
+                  if (isSettledRef.current) return;
                   setPaymentMode(mode);
                   syncCartToCloud(cartItems, selectedCaptain, customerName, mode);
                 }}
@@ -448,7 +475,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           <div className="flex flex-col gap-2.5">
             <button 
               onClick={handleKOT} 
-              disabled={cartItems.length === 0} 
+              disabled={cartItems.length === 0 || isSettledRef.current} 
               className="w-full py-4 md:py-5 bg-orange-600 text-white rounded-2xl md:rounded-[2.5rem] font-black uppercase text-[11px] md:text-[13px] tracking-[0.15em] shadow-xl shadow-orange-600/20 disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:bg-orange-500"
             >
               <i className="fa-solid fa-fire text-lg md:text-xl"></i> SEND KOT
@@ -457,7 +484,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
               <button 
                 onClick={handleBillAndSettle} 
-                disabled={cartItems.length === 0 || isMobile} 
+                disabled={cartItems.length === 0 || isMobile || isSettledRef.current} 
                 className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
                 title={isMobile ? "Billing Restricted on Mobile" : ""}
               >
