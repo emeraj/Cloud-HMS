@@ -425,7 +425,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                     <span className="text-[7px] font-black text-muted pl-1 uppercase tracking-tighter">Rate</span>
                     <input 
                       type="number" 
-                      className="w-11 bg-transparent border-none text-[10px] font-black text-indigo-600 theme-dark:text-indigo-400 outline-none p-0 focus:ring-0"
+                      className="w-11 bg-transparent border-none text-[10px] font-black text-amber-600 theme-dark:text-yellow-400 outline-none p-0 focus:ring-0"
                       value={item.price}
                       onChange={(e) => updatePrice(item.id, Number(e.target.value))}
                     />
