@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import Dashboard from './components/Dashboard';
@@ -31,7 +30,7 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
     { id: 'Dashboard', icon: 'fa-solid fa-chart-line', label: 'Dashboard' },
     { id: 'Masters', icon: 'fa-solid fa-database', label: 'Master Data' },
     { id: 'Reports', icon: 'fa-solid fa-file-invoice-dollar', label: 'Reports' },
-    { id: 'Settings', icon: 'fa-solid fa-gears', label: 'Settings' },
+    { id: 'Settings', icon: 'fa-solid fa-gears', label: 'Settings' }
   ];
 
   return (
@@ -90,14 +89,16 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
 };
 
 const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
+  const tabs = [
+    { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
+    { id: 'Masters', icon: 'fa-database', label: 'Data' },
+    { id: 'Reports', icon: 'fa-chart-pie', label: 'Bills' },
+    { id: 'Settings', icon: 'fa-gear', label: 'Config' }
+  ];
+
   return (
     <div className="md:hidden fixed bottom-[22px] left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50 transition-colors duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-      {[
-        { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
-        { id: 'Masters', icon: 'fa-database', label: 'Data' },
-        { id: 'Reports', icon: 'fa-chart-pie', label: 'Bills' },
-        { id: 'Settings', icon: 'fa-gear', label: 'Config' }
-      ].map(tab => (
+      {tabs.map(tab => (
         <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-600' : 'text-muted'}`}>
           <i className={`fa-solid fa-${tab.icon} text-sm`}></i>
           <span className="text-[8px] mt-1 font-bold uppercase">{tab.label}</span>

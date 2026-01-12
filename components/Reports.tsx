@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -12,6 +11,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const { orders, captains, setActiveTable, tables, upsert, remove } = useApp();
   const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Reactive filter that updates immediately when 'orders' from store changes
   const filteredOrders = useMemo(() => {
@@ -79,6 +79,30 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
     }
   };
 
+  const handleDayClose = async () => {
+    if (filteredOrders.length === 0) {
+      alert("No data found for this date to close.");
+      return;
+    }
+
+    if (confirm("Do You Realy want to close day!")) {
+      setIsClosing(true);
+      try {
+        // Iterate through all orders for the selected date and remove them
+        // In a real database, you might archive them, but as per request, we clear them
+        for (const order of filteredOrders) {
+          await remove("orders", order.id);
+        }
+        alert("Day closed successfully. All bills cleared and sequence reset for next transaction.");
+      } catch (err) {
+        console.error(err);
+        alert("An error occurred while closing the day.");
+      } finally {
+        setIsClosing(false);
+      }
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-end mb-2">
@@ -111,14 +135,25 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
             </div>
           </div>
           
-          <button 
-            onClick={() => onPrintDayBook?.(settledOrders, selectedDate)}
-            disabled={settledOrders.length === 0}
-            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white p-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest self-stretch sm:self-end shadow-md"
-          >
-            <i className="fa-solid fa-print"></i>
-            Print Report
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => onPrintDayBook?.(settledOrders, selectedDate)}
+              disabled={settledOrders.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white p-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest self-stretch sm:self-end shadow-md flex-1 md:flex-none"
+            >
+              <i className="fa-solid fa-print"></i>
+              Print
+            </button>
+            
+            <button 
+              onClick={handleDayClose}
+              disabled={filteredOrders.length === 0 || isClosing}
+              className="bg-rose-600 hover:bg-rose-500 disabled:opacity-30 transition-all text-white p-4 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest self-stretch sm:self-end shadow-md flex-1 md:flex-none"
+            >
+              {isClosing ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-calendar-check"></i>}
+              Day Close
+            </button>
+          </div>
         </div>
       </div>
 
