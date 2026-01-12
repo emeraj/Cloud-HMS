@@ -186,8 +186,15 @@ const MainContent: React.FC = () => {
                     
                     <div className="space-y-6">
                       <div className="space-y-1">
-                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">RESTAURANT NAME</label>
-                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.name} onChange={e => setSettings({...settings, name: e.target.value})} />
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">RESTAURANT NAME (LOCKED)</label>
+                        <div className="relative">
+                          <input 
+                            className="w-full p-4 bg-slate-100 theme-dark:bg-slate-800/50 border-none rounded-2xl text-slate-500 font-black text-sm outline-none shadow-inner cursor-not-allowed" 
+                            value={settings.name} 
+                            readOnly 
+                          />
+                          <i className="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-slate-400/50"></i>
+                        </div>
                       </div>
                       
                       <div className="space-y-1">
