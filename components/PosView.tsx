@@ -10,7 +10,7 @@ interface PosViewProps {
 const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const { 
     activeTable, tables, menu, groups, captains, 
-    orders, taxes, upsert, user 
+    orders, taxes, upsert, remove, user 
   } = useApp();
   
   const currentTable = tables.find(t => t.id === activeTable);
@@ -111,7 +111,23 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   ) => {
     // CRITICAL: If table is already available or order is settled, do NOT re-sync/re-open
     if (!activeTable || !currentTable || isSettledRef.current) return;
-    if (currentTable.status === 'Available' && updatedItems.length === 0) return;
+    
+    const isCartEmpty = updatedItems.length === 0;
+
+    // FIX: If cart is empty, immediately clear Table occupancy
+    if (isCartEmpty) {
+      await upsert("tables", { 
+        ...currentTable, 
+        status: 'Available', 
+        currentOrderId: undefined 
+      });
+      // Also remove the order record from database if it was just a draft (no bill no)
+      if (existingOrder && existingOrder.status === 'Pending' && (!existingOrder.dailyBillNo || existingOrder.dailyBillNo === '')) {
+        await remove("orders", existingOrder.id);
+      }
+      lastCloudOrderRef.current = null;
+      return;
+    }
 
     const subTotal = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
@@ -147,15 +163,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
     await upsert("orders", newOrder);
     
-    // Only update table if it's currently occupied by this order or needs to be marked as occupied
-    if (currentTable.status !== 'Available' || updatedItems.length > 0) {
-      await upsert("tables", { 
-        ...currentTable, 
-        status: currentStatus === 'Settled' ? 'Available' : 'Occupied', 
-        currentOrderId: currentStatus === 'Settled' ? undefined : orderId 
-      });
-    }
-  }, [activeTable, currentTable, existingOrder, upsert, user]);
+    // Update table status (Occupied because cart is NOT empty)
+    await upsert("tables", { 
+      ...currentTable, 
+      status: currentStatus === 'Settled' ? 'Available' : 'Occupied', 
+      currentOrderId: currentStatus === 'Settled' ? undefined : orderId 
+    });
+  }, [activeTable, currentTable, existingOrder, upsert, remove, user]);
 
   const addToCart = async (item: MenuItem) => {
     if (isSettledRef.current) return;
