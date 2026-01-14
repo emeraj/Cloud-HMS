@@ -118,11 +118,11 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          {/* Simple Clean Header: Removed all potential "black bar" triggers */}
+          {/* Simple Clean Header: Updated to 'E S T I M A T E' and normal font size */}
           <div className="border-t border-black border-dashed mt-2 mb-1"></div>
           <div className="text-center py-1">
-            <span className="text-[20px] font-black tracking-[0.2em] inline-block">
-              {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
+            <span className="text-[14px] font-black inline-block">
+              {isEstimate ? 'E S T I M A T E' : 'T A X  I N V O I C E'}
             </span>
           </div>
           <div className="border-b border-black border-dashed mb-2 pb-1"></div>
@@ -238,9 +238,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center space-y-1 mt-3">
             <p className="font-black text-[12px]">{settings.thankYouMessage}</p>
             <p className="text-[10px] font-bold">CONTACT: {settings.phone}</p>
-            <div className="mt-4 opacity-50 text-[8px] italic tracking-[0.2em] uppercase">
-              *** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***
-            </div>
           </div>
           
           <div className="text-center py-8">
