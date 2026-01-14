@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -84,7 +83,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     : '';
 
   const qrCodeImg = upiUrl 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUrl)}`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`
     : '';
 
   const gstBreakdown = order.items.reduce((acc: any, item) => {
@@ -207,10 +206,16 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {settings.printQrCode && qrCodeImg && (order.paymentMode === 'UPI' || isEstimate) && (
+          {/* QR Code Logic: Always visible if printQrCode is enabled and upiId is set */}
+          {settings.printQrCode && qrCodeImg && (
             <div className="text-center mb-4">
               <p className="text-[8px] font-black mb-2">SCAN TO PAY USING UPI</p>
-              <img src={qrCodeImg} alt="Payment QR" className="mx-auto w-28 h-28 mb-1" />
+              <img 
+                src={qrCodeImg} 
+                alt="Payment QR" 
+                className="mx-auto w-32 h-32 mb-1 border-2 border-black p-1" 
+                onLoad={() => console.log('QR Code Loaded')}
+              />
               <p className="text-[8px] font-bold">{settings.upiId}</p>
             </div>
           )}

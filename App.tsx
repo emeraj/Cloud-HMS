@@ -123,12 +123,13 @@ const MainContent: React.FC = () => {
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
-    setTimeout(() => { window.print(); }, 400);
+    // Increased timeout to 1000ms to ensure QR code image from external API loads fully before printing
+    setTimeout(() => { window.print(); }, 1000);
   };
 
   const handlePrintDayBook = (orders: Order[], date: string) => {
     setPrintData({ type: 'DAYBOOK', reportOrders: orders, reportDate: date });
-    setTimeout(() => { window.print(); }, 400);
+    setTimeout(() => { window.print(); }, 1000);
   };
 
   const saveSettings = async () => {
