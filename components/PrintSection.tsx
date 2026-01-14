@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -13,17 +12,6 @@ interface PrintSectionProps {
 const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate }) => {
   const { settings, tables, captains } = useApp();
   
-  // Helper for the requested 3-line paper feed
-  // Using actual line breaks and height to ensure thermal printer feeds correctly
-  const PaperFeed = () => (
-    <div className="paper-feed" style={{ marginTop: '10px', width: '100%' }}>
-      <div style={{ height: '1.2em' }}>&nbsp;</div>
-      <div style={{ height: '1.2em' }}>&nbsp;</div>
-      <div style={{ height: '1.2em' }}>&nbsp;</div>
-      <div className="text-center text-[7px] opacity-10" style={{ fontSize: '7px' }}>.</div>
-    </div>
-  );
-
   if (type === 'DAYBOOK') {
     if (!reportOrders) return null;
     const total = reportOrders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -68,7 +56,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center mt-6">
             <p className="text-[8px] opacity-40 italic">*** End of Report ***</p>
           </div>
-          <PaperFeed />
+          {/* Paper feed for DayBook */}
+          <div className="h-16"></div>
         </div>
       </div>
     );
@@ -89,7 +78,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     hour12: true
   });
 
-  const isEstimate = settings.invoiceFormat === 2 || (order.dailyBillNo === 'EST');
+  const isEstimate = settings.invoiceFormat === 2;
 
   const upiUrl = settings.upiId 
     ? `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${order.totalAmount.toFixed(2)}&cu=INR&tn=BILL_${order.dailyBillNo || order.id.slice(-4)}`
@@ -126,7 +115,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
 
           <div className="border-t border-black border-dashed my-1"></div>
-          <div className="text-center font-black text-[12px] py-1 uppercase tracking-widest border border-black mx-4 my-1">
+          <div className="text-center font-black text-[11px] py-0.5 uppercase tracking-widest">
             {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
           </div>
           <div className="border-t border-black border-dashed my-1"></div>
@@ -219,6 +208,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
+          {/* QR Code Logic */}
           {settings.printQrCode && qrCodeImg && (
             <div className="text-center mb-2">
               <p className="text-[8px] font-black mb-1">SCAN TO PAY USING UPI</p>
@@ -239,7 +229,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <div className="mt-2 opacity-40 text-[6px] italic">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
           
-          <PaperFeed />
+          {/* Paper feed: ensures text is safe from the cutter */}
+          <div className="h-16"></div>
         </div>
       ) : (
         <div className="text-center flex flex-col items-stretch">
@@ -271,7 +262,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
              </tbody>
           </table>
           <p className="text-[8px] mt-2 opacity-75 italic">--- End of Order ---</p>
-          <PaperFeed />
+          
+          {/* Paper feed for KOT */}
+          <div className="h-16"></div>
         </div>
       )}
     </div>
