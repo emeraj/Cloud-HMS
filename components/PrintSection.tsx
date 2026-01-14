@@ -56,8 +56,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center mt-6">
             <p className="text-[8px] opacity-40 italic">*** End of Report ***</p>
           </div>
-          {/* Increased Paper feed for DayBook */}
-          <div className="h-48"></div>
+          {/* Professional Paper Feed: Advances paper past the cutter */}
+          <div className="h-64"></div>
         </div>
       </div>
     );
@@ -108,7 +108,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
           <div className="text-center mb-0.5">
-            <h1 className="text-[13px] font-black tracking-tight mb-0.5">{settings.name}</h1>
+            <h1 className="text-[13px] font-black tracking-tight mb-0.5 leading-none">{settings.name}</h1>
             <p className="text-[8px] whitespace-pre-line leading-none px-2">{settings.address}</p>
             {settings.fssai && <p className="text-[8px] font-bold mt-0.5">FSSAI: {settings.fssai}</p>}
             {!isEstimate && settings.gstin && <p className="text-[8px] font-bold">GSTIN: {settings.gstin}</p>}
@@ -120,7 +120,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
           <div className="border-t border-black border-dashed my-1"></div>
 
-          <div className="space-y-0.5 mb-1 px-0.5">
+          <div className="space-y-0.5 mb-1 px-0.5 text-[9px]">
             <div className="flex justify-between">
               <span>{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST-' : 'INV-'}{order.dailyBillNo || order.id.slice(-5)}</span>
               <span>DATE: {formattedDate}</span>
@@ -208,7 +208,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {/* QR Code Logic */}
           {settings.printQrCode && qrCodeImg && (
             <div className="text-center mb-2">
               <p className="text-[8px] font-black mb-1">SCAN TO PAY USING UPI</p>
@@ -224,13 +223,13 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           )}
 
           <div className="text-center space-y-0.5 mt-2">
-            <p className="font-bold text-[9px]">{settings.thankYouMessage}</p>
-            <p className="text-[8px]">CONTACT: {settings.phone}</p>
-            <div className="mt-2 opacity-40 text-[6px] italic">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
+            <p className="font-bold text-[9px] leading-tight">{settings.thankYouMessage}</p>
+            <p className="text-[8px] font-bold">CONTACT: {settings.phone}</p>
+            <div className="mt-2 opacity-40 text-[6px] italic leading-none">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
           
-          {/* Increased Paper feed: ensures text is safe from the cutter by feeding 4x more paper */}
-          <div className="h-48"></div>
+          {/* Professional Paper Feed: ensures text is safe from the cutter by feeding extra paper */}
+          <div className="h-64"></div>
         </div>
       ) : (
         <div className="text-center flex flex-col items-stretch">
@@ -263,8 +262,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </table>
           <p className="text-[8px] mt-2 opacity-75 italic">--- End of Order ---</p>
           
-          {/* Increased Paper feed for KOT */}
-          <div className="h-48"></div>
+          <div className="h-64"></div>
         </div>
       )}
     </div>

@@ -10,7 +10,7 @@ interface PosViewProps {
 const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const { 
     activeTable, tables, menu, groups, captains, 
-    orders, taxes, upsert, remove, user 
+    orders, taxes, upsert, remove, user, settings 
   } = useApp();
   
   const currentTable = tables.find(t => t.id === activeTable);
@@ -25,6 +25,20 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Background QR Preloader to prevent blank QR on first print
+  useEffect(() => {
+    if (settings.upiId && cartItems.length > 0) {
+      const subTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+      const taxAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
+      const totalAmount = subTotal + taxAmount;
+      const upiUrl = `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${totalAmount.toFixed(2)}&cu=INR`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`;
+      
+      const img = new Image();
+      img.src = qrUrl;
+    }
+  }, [cartItems, settings.upiId, settings.name]);
 
   // Reference to track if the current order was settled by another device
   const isSettledRef = useRef(false);
