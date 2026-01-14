@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -12,20 +13,12 @@ interface PrintSectionProps {
 const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate }) => {
   const { settings, tables, captains } = useApp();
   
-  /**
-   * PaperFeed: Adds vertical whitespace at the end of the receipt.
-   * Thermal printers have the cutter located below the print head.
-   * Adding these "line feeds" ensures the last line of text is 
-   * visible and safe from being cut or trapped inside the printer.
-   */
+  // Helper for the requested 3-line paper feed
   const PaperFeed = () => (
-    <div className="print-footer-spacer" aria-hidden="true">
-      {/* 3 standard line height spaces */}
-      <div className="h-6"></div>
-      <div className="h-6"></div>
-      <div className="h-6"></div>
-      {/* Extra feed to advance paper past the physical cutter (approx 1-2 inches) */}
-      <div className="h-24"></div>
+    <div className="paper-feed no-print-view" style={{ height: '60px' }}>
+      <div className="opacity-0">.</div>
+      <div className="opacity-0">.</div>
+      <div className="opacity-0">.</div>
     </div>
   );
 
@@ -94,7 +87,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     hour12: true
   });
 
-  const isEstimate = settings.invoiceFormat === 2;
+  const isEstimate = settings.invoiceFormat === 2 || (order.dailyBillNo === 'EST');
 
   const upiUrl = settings.upiId 
     ? `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${order.totalAmount.toFixed(2)}&cu=INR&tn=BILL_${order.dailyBillNo || order.id.slice(-4)}`
@@ -124,7 +117,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
           <div className="text-center mb-0.5">
-            <h1 className="text-[13px] font-black tracking-tight mb-0.5 leading-none">{settings.name}</h1>
+            <h1 className="text-[13px] font-black tracking-tight mb-0.5">{settings.name}</h1>
             <p className="text-[8px] whitespace-pre-line leading-none px-2">{settings.address}</p>
             {settings.fssai && <p className="text-[8px] font-bold mt-0.5">FSSAI: {settings.fssai}</p>}
             {!isEstimate && settings.gstin && <p className="text-[8px] font-bold">GSTIN: {settings.gstin}</p>}
@@ -136,7 +129,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
           <div className="border-t border-black border-dashed my-1"></div>
 
-          <div className="space-y-0.5 mb-1 px-0.5 text-[9px]">
+          <div className="space-y-0.5 mb-1 px-0.5">
             <div className="flex justify-between">
               <span>{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST-' : 'INV-'}{order.dailyBillNo || order.id.slice(-5)}</span>
               <span>DATE: {formattedDate}</span>
@@ -239,9 +232,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           )}
 
           <div className="text-center space-y-0.5 mt-2">
-            <p className="font-bold text-[9px] leading-tight">{settings.thankYouMessage}</p>
-            <p className="text-[8px] font-bold">CONTACT: {settings.phone}</p>
-            <div className="mt-2 opacity-40 text-[6px] italic leading-none">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
+            <p className="font-bold text-[9px]">{settings.thankYouMessage}</p>
+            <p className="text-[8px]">CONTACT: {settings.phone}</p>
+            <div className="mt-2 opacity-40 text-[6px] italic">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
           
           <PaperFeed />
@@ -269,14 +262,13 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
              <tbody>
                {order.items.map((item, idx) => (
                  <tr key={idx} className="border-b border-black border-dotted">
-                    <td className="py-1.5 font-black text-[12px] font-bold leading-tight">{item.name}</td>
+                    <td className="py-1.5 font-black text-[12px] leading-tight">{item.name}</td>
                     <td className="py-1.5 text-center font-black text-[18px]">{item.quantity}</td>
                  </tr>
                ))}
              </tbody>
           </table>
           <p className="text-[8px] mt-2 opacity-75 italic">--- End of Order ---</p>
-          
           <PaperFeed />
         </div>
       )}

@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
@@ -10,7 +11,7 @@ interface PosViewProps {
 const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const { 
     activeTable, tables, menu, groups, captains, 
-    orders, taxes, upsert, remove, user, settings 
+    orders, taxes, upsert, remove, user 
   } = useApp();
   
   const currentTable = tables.find(t => t.id === activeTable);
@@ -26,21 +27,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Background QR Preloader to prevent blank QR on first print
-  useEffect(() => {
-    if (settings.upiId && cartItems.length > 0) {
-      const subTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-      const taxAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
-      const totalAmount = subTotal + taxAmount;
-      const upiUrl = `upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(settings.name)}&am=${totalAmount.toFixed(2)}&cu=INR`;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`;
-      
-      const img = new Image();
-      img.src = qrUrl;
-    }
-  }, [cartItems, settings.upiId, settings.name]);
-
-  // Reference to track if the current order was settled by another device
   const isSettledRef = useRef(false);
 
   useEffect(() => {
@@ -51,10 +37,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const lastCloudOrderRef = useRef<string | null>(null);
 
-  // Sync component state with database when existingOrder changes (e.g., from another device)
   useEffect(() => {
     if (existingOrder) {
-      // If we see the order is settled in the DB, mark it so we don't re-open the table
       if (existingOrder.status === 'Settled') {
         isSettledRef.current = true;
       } else {
@@ -77,7 +61,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         lastCloudOrderRef.current = cloudSignature;
       }
     } else if (!existingOrder && currentTable?.status === 'Available') {
-      // Table was cleared by another device
       setCartItems([]);
       setSelectedCaptain('');
       setCustomerName('');
@@ -100,7 +83,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
-  // Robust Bill Number Logic: Last Bill # + 1
   const getNextBillNo = useCallback(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayOrders = orders.filter(o => {
@@ -123,19 +105,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     payMode: 'Cash' | 'UPI' | 'Card',
     currentStatus: 'Pending' | 'Billed' | 'Settled' = 'Pending'
   ) => {
-    // CRITICAL: If table is already available or order is settled, do NOT re-sync/re-open
     if (!activeTable || !currentTable || isSettledRef.current) return;
     
     const isCartEmpty = updatedItems.length === 0;
 
-    // FIX: If cart is empty, immediately clear Table occupancy
     if (isCartEmpty) {
       await upsert("tables", { 
         ...currentTable, 
         status: 'Available', 
         currentOrderId: undefined 
       });
-      // Also remove the order record from database if it was just a draft (no bill no)
       if (existingOrder && existingOrder.status === 'Pending' && (!existingOrder.dailyBillNo || existingOrder.dailyBillNo === '')) {
         await remove("orders", existingOrder.id);
       }
@@ -177,7 +156,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
     await upsert("orders", newOrder);
     
-    // Update table status (Occupied because cart is NOT empty)
     await upsert("tables", { 
       ...currentTable, 
       status: currentStatus === 'Settled' ? 'Available' : 'Occupied', 
@@ -232,16 +210,11 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const handleKOT = async () => {
-    if (isSettledRef.current) return;
-    let billNo = existingOrder?.dailyBillNo;
-    if (!billNo) {
-      billNo = getNextBillNo();
-    }
-
+    if (isSettledRef.current || cartItems.length === 0) return;
+    
     if (existingOrder) {
       const updatedOrder = { 
         ...existingOrder, 
-        dailyBillNo: billNo,
         kotCount: (existingOrder.kotCount || 0) + 1 
       };
       await upsert("orders", updatedOrder);
@@ -250,7 +223,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       const orderId = `ORD-${Date.now()}`;
       const newOrder: Order = {
         id: orderId,
-        dailyBillNo: billNo,
+        dailyBillNo: '', 
         tableId: activeTable!,
         captainId: selectedCaptain,
         items: cartItems,
@@ -268,8 +241,28 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     }
   };
 
+  const handleEstimate = () => {
+    if (cartItems.length === 0 || isSettledRef.current) return;
+    
+    const tempOrder: Order = {
+      id: existingOrder?.id || `EST-${Date.now()}`,
+      dailyBillNo: 'EST',
+      tableId: activeTable!,
+      captainId: selectedCaptain,
+      items: cartItems,
+      status: 'Pending',
+      timestamp: new Date().toISOString(),
+      ...totals,
+      kotCount: existingOrder?.kotCount || 0,
+      customerName,
+      paymentMode,
+      cashierName: user?.displayName || 'Admin'
+    };
+    onPrint('BILL', tempOrder);
+  };
+
   const handleBillAndSettle = async () => {
-    if (!currentTable || isMobile || isSettledRef.current) return;
+    if (!currentTable || cartItems.length === 0 || isSettledRef.current) return;
     
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
@@ -289,7 +282,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       cashierName: user?.displayName || 'Admin'
     };
 
-    // Mark as settled locally first to prevent re-sync loop
     isSettledRef.current = true;
     
     await upsert("orders", newOrder);
@@ -500,26 +492,31 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            <button 
-              onClick={handleKOT} 
-              disabled={cartItems.length === 0 || isSettledRef.current} 
-              className="w-full py-4 md:py-5 bg-orange-600 text-white rounded-2xl md:rounded-[2.5rem] font-black uppercase text-[11px] md:text-[13px] tracking-[0.15em] shadow-xl shadow-orange-600/20 disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:bg-orange-500"
-            >
-              <i className="fa-solid fa-fire text-lg md:text-xl"></i> SEND KOT
-            </button>
-            
-            <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <button 
-                onClick={handleBillAndSettle} 
-                disabled={cartItems.length === 0 || isMobile || isSettledRef.current} 
-                className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
-                title={isMobile ? "Billing Restricted on Mobile" : ""}
+                onClick={handleKOT} 
+                disabled={cartItems.length === 0 || isSettledRef.current} 
+                className="py-3 bg-orange-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500"
               >
-                <i className="fa-solid fa-receipt text-xs"></i> 
-                {isMobile ? 'PC Billing Only' : 'PRINT BILL & SETTLE'}
+                <i className="fa-solid fa-fire text-xs"></i> SEND KOT
+              </button>
+              <button 
+                onClick={handleEstimate} 
+                disabled={cartItems.length === 0 || isSettledRef.current} 
+                className="py-3 bg-slate-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-slate-500"
+              >
+                <i className="fa-solid fa-file-invoice text-xs"></i> ESTIMATE
               </button>
             </div>
+            
+            <button 
+              onClick={handleBillAndSettle} 
+              disabled={cartItems.length === 0 || isSettledRef.current} 
+              className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[11px] tracking-[0.1em] shadow-xl shadow-emerald-600/20 disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:bg-emerald-500"
+            >
+              <i className="fa-solid fa-receipt text-lg"></i> PRINT BILL & SETTLE
+            </button>
           </div>
         </div>
       </div>
