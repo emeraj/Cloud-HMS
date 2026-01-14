@@ -56,8 +56,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center mt-6">
             <p className="text-[8px] opacity-40 italic">*** End of Report ***</p>
           </div>
-          {/* Paper feed for DayBook */}
-          <div className="h-16"></div>
+          {/* Increased Paper feed for DayBook */}
+          <div className="h-48"></div>
         </div>
       </div>
     );
@@ -229,8 +229,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <div className="mt-2 opacity-40 text-[6px] italic">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
           
-          {/* Paper feed: ensures text is safe from the cutter */}
-          <div className="h-16"></div>
+          {/* Increased Paper feed: ensures text is safe from the cutter by feeding 4x more paper */}
+          <div className="h-48"></div>
         </div>
       ) : (
         <div className="text-center flex flex-col items-stretch">
@@ -263,8 +263,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </table>
           <p className="text-[8px] mt-2 opacity-75 italic">--- End of Order ---</p>
           
-          {/* Paper feed for KOT */}
-          <div className="h-16"></div>
+          {/* Increased Paper feed for KOT */}
+          <div className="h-48"></div>
         </div>
       )}
     </div>
