@@ -13,18 +13,19 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
   const { settings, tables, captains } = useApp();
   
   /**
-   * Helper for consistent line feeds at the end of any print.
-   * Thermal printers require extra vertical space (line feeds) to ensure the 
-   * text passes the physical cutting mechanism.
+   * PaperFeed: Adds vertical whitespace at the end of the receipt.
+   * Thermal printers have the cutter located below the print head.
+   * Adding these "line feeds" ensures the last line of text is 
+   * visible and safe from being cut or trapped inside the printer.
    */
   const PaperFeed = () => (
-    <div className="print-footer-spacer">
-      {/* 3 explicit line feed spaces as requested for proper paper cutting */}
-      <div className="h-10"></div>
-      <div className="h-10"></div>
-      <div className="h-10"></div>
-      {/* Additional safety buffer for standard 80mm printers */}
-      <div className="h-20"></div>
+    <div className="print-footer-spacer" aria-hidden="true">
+      {/* 3 standard line height spaces */}
+      <div className="h-6"></div>
+      <div className="h-6"></div>
+      <div className="h-6"></div>
+      {/* Extra feed to advance paper past the physical cutter (approx 1-2 inches) */}
+      <div className="h-24"></div>
     </div>
   );
 
@@ -268,7 +269,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
              <tbody>
                {order.items.map((item, idx) => (
                  <tr key={idx} className="border-b border-black border-dotted">
-                    <td className="py-1.5 font-black text-[12px] leading-tight">{item.name}</td>
+                    <td className="py-1.5 font-black text-[12px] font-bold leading-tight">{item.name}</td>
                     <td className="py-1.5 text-center font-black text-[18px]">{item.quantity}</td>
                  </tr>
                ))}
