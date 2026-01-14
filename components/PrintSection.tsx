@@ -117,11 +117,11 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          <div className="border-t border-black border-dashed my-1"></div>
-          <div className="text-center font-black text-[16px] py-1.5 uppercase tracking-[0.2em] border-y-2 border-black my-1">
-            {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
+          <div className="border-y border-black border-dashed my-2 py-2 text-center">
+            <span className="text-[16px] font-black tracking-[0.2em]">
+              {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
+            </span>
           </div>
-          <div className="border-t border-black border-dashed my-1"></div>
 
           <div className="space-y-1 mb-2 px-0.5 text-[11px]">
             <div className="flex justify-between">
