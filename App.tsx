@@ -121,40 +121,15 @@ const MainContent: React.FC = () => {
     }
   }, [settings.theme]);
 
-  // Robust printing that waits for images to load
-  const handlePrintAction = async () => {
-    const printSection = document.getElementById('print-section');
-    if (!printSection) return;
-
-    // Find all images in the print section
-    const images = Array.from(printSection.getElementsByTagName('img'));
-    
-    if (images.length > 0) {
-      const loadPromises = images.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve) => {
-          img.onload = resolve;
-          img.onerror = resolve; // Print anyway if image fails
-        });
-      });
-      await Promise.all(loadPromises);
-    }
-    
-    // Tiny extra delay to ensure rendering engine has applied the images to the buffer
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
-    // Use the robust waiter
-    setTimeout(handlePrintAction, 200);
+    // Increased timeout to 1500ms to ensure QR code image from external API loads fully before printing, especially on 1st load
+    setTimeout(() => { window.print(); }, 1500);
   };
 
   const handlePrintDayBook = (orders: Order[], date: string) => {
     setPrintData({ type: 'DAYBOOK', reportOrders: orders, reportDate: date });
-    setTimeout(handlePrintAction, 200);
+    setTimeout(() => { window.print(); }, 1500);
   };
 
   const saveSettings = async () => {
