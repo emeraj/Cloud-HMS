@@ -117,8 +117,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          <div className="border-y border-black border-dashed my-2 py-2 text-center">
-            <span className="text-[16px] font-black tracking-[0.2em]">
+          {/* Fixed Header: Removed solid black bar that caused "black box" prints */}
+          <div className="border-y-2 border-black border-dashed my-2 py-2 text-center">
+            <span className="text-[18px] font-black tracking-[0.2em] block">
               {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
             </span>
           </div>
@@ -180,9 +181,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             )}
           </div>
 
-          <div className="border-y border-black border-dashed py-2 mb-3 flex justify-between items-center px-1 bg-slate-50">
+          <div className="border-y border-black border-dashed py-2 mb-3 flex justify-between items-center px-1">
             <span className="text-[14px] font-black">GRAND TOTAL:</span>
-            <span className="text-[18px] font-black">₹{order.totalAmount.toFixed(2)}</span>
+            <span className="text-[20px] font-black">₹{order.totalAmount.toFixed(2)}</span>
           </div>
 
           {!isEstimate && settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
@@ -226,7 +227,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           )}
 
           <div className="text-center space-y-1 mt-3">
-            <p className="font-black text-[11px]">{settings.thankYouMessage}</p>
+            <p className="font-black text-[12px]">{settings.thankYouMessage}</p>
             <p className="text-[10px] font-bold">CONTACT: {settings.phone}</p>
             <div className="mt-3 opacity-50 text-[8px] italic tracking-[0.2em]">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
