@@ -111,17 +111,17 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
           <div className="text-center mb-1">
-            <h1 className="text-[16px] font-black tracking-tight mb-1">{settings.name}</h1>
+            <h1 className="text-[18px] font-black tracking-tight mb-1">{settings.name}</h1>
             <p className="text-[10px] whitespace-pre-line leading-normal px-2">{settings.address}</p>
             {settings.fssai && <p className="text-[10px] font-bold mt-1">FSSAI: {settings.fssai}</p>}
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          <div className="border-t border-black border-dashed my-1.5"></div>
-          <div className="text-center font-black text-[14px] py-1 uppercase tracking-widest bg-black text-white">
+          <div className="border-t border-black border-dashed my-1"></div>
+          <div className="text-center font-black text-[16px] py-1.5 uppercase tracking-[0.2em] border-y-2 border-black my-1">
             {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
           </div>
-          <div className="border-t border-black border-dashed my-1.5"></div>
+          <div className="border-t border-black border-dashed my-1"></div>
 
           <div className="space-y-1 mb-2 px-0.5 text-[11px]">
             <div className="flex justify-between">
