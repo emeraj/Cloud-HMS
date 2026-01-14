@@ -83,7 +83,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     : '';
 
   const qrCodeImg = upiUrl 
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`
     : '';
 
   const gstBreakdown = order.items.reduce((acc: any, item) => {
@@ -213,8 +213,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
               <img 
                 src={qrCodeImg} 
                 alt="Payment QR" 
-                className="mx-auto w-32 h-32 mb-1 border-2 border-black p-1" 
-                onLoad={() => console.log('QR Code Loaded')}
+                className="mx-auto w-32 h-32 mb-1" 
+                loading="eager"
+                crossOrigin="anonymous"
               />
               <p className="text-[8px] font-bold">{settings.upiId}</p>
             </div>
