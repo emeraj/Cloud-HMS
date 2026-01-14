@@ -14,11 +14,13 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
   const { settings, tables, captains } = useApp();
   
   // Helper for the requested 3-line paper feed
+  // Using actual line breaks and height to ensure thermal printer feeds correctly
   const PaperFeed = () => (
-    <div className="paper-feed no-print-view" style={{ height: '60px' }}>
-      <div className="opacity-0">.</div>
-      <div className="opacity-0">.</div>
-      <div className="opacity-0">.</div>
+    <div className="paper-feed" style={{ marginTop: '10px', width: '100%' }}>
+      <div style={{ height: '1.2em' }}>&nbsp;</div>
+      <div style={{ height: '1.2em' }}>&nbsp;</div>
+      <div style={{ height: '1.2em' }}>&nbsp;</div>
+      <div className="text-center text-[7px] opacity-10" style={{ fontSize: '7px' }}>.</div>
     </div>
   );
 
@@ -124,7 +126,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
 
           <div className="border-t border-black border-dashed my-1"></div>
-          <div className="text-center font-black text-[11px] py-0.5 uppercase tracking-widest">
+          <div className="text-center font-black text-[12px] py-1 uppercase tracking-widest border border-black mx-4 my-1">
             {isEstimate ? 'ESTIMATE' : 'TAX INVOICE'}
           </div>
           <div className="border-t border-black border-dashed my-1"></div>
