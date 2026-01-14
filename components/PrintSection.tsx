@@ -12,6 +12,22 @@ interface PrintSectionProps {
 const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate }) => {
   const { settings, tables, captains } = useApp();
   
+  /**
+   * Helper for consistent line feeds at the end of any print.
+   * Thermal printers require extra vertical space (line feeds) to ensure the 
+   * text passes the physical cutting mechanism.
+   */
+  const PaperFeed = () => (
+    <div className="print-footer-spacer">
+      {/* 3 explicit line feed spaces as requested for proper paper cutting */}
+      <div className="h-10"></div>
+      <div className="h-10"></div>
+      <div className="h-10"></div>
+      {/* Additional safety buffer for standard 80mm printers */}
+      <div className="h-20"></div>
+    </div>
+  );
+
   if (type === 'DAYBOOK') {
     if (!reportOrders) return null;
     const total = reportOrders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -56,8 +72,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center mt-6">
             <p className="text-[8px] opacity-40 italic">*** End of Report ***</p>
           </div>
-          {/* Professional Paper Feed: Advances paper past the cutter */}
-          <div className="h-64"></div>
+          <PaperFeed />
         </div>
       </div>
     );
@@ -228,8 +243,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <div className="mt-2 opacity-40 text-[6px] italic leading-none">*** END OF {isEstimate ? 'ESTIMATE' : 'INVOICE'} ***</div>
           </div>
           
-          {/* Professional Paper Feed: ensures text is safe from the cutter by feeding extra paper */}
-          <div className="h-64"></div>
+          <PaperFeed />
         </div>
       ) : (
         <div className="text-center flex flex-col items-stretch">
@@ -262,7 +276,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </table>
           <p className="text-[8px] mt-2 opacity-75 italic">--- End of Order ---</p>
           
-          <div className="h-64"></div>
+          <PaperFeed />
         </div>
       )}
     </div>
