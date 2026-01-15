@@ -223,11 +223,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           <h1 className="text-2xl md:text-3xl font-black text-main tracking-tight uppercase opacity-90 leading-none">Cloud-HMS</h1>
         </div>
 
-        <div className="flex items-center gap-2 mb-3 md:mb-4">
-          <button onClick={onBack} className="flex-shrink-0 w-11 h-11 md:w-10 md:h-10 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95 flex items-center justify-center"><i className="fa-solid fa-arrow-left text-xs"></i></button>
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 items-center pb-0.5">
-            <button onClick={() => setSelectedGroupId('all')} className={`px-4 md:px-4 py-2.5 md:py-2.5 rounded-xl text-[10px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>All Items</button>
-            {groups.map(g => (<button key={g.id} onClick={() => setSelectedGroupId(g.id)} className={`px-4 md:px-4 py-2.5 md:py-2.5 rounded-xl text-[10px] md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>{g.name}</button>))}
+        <div className="flex items-center gap-3 mb-3 md:mb-4">
+          <button 
+            onClick={onBack} 
+            className="flex-shrink-0 w-16 h-16 md:w-10 md:h-10 bg-card rounded-2xl md:rounded-xl text-indigo-600 md:text-muted hover:text-indigo-600 border-2 md:border border-indigo-500 md:border-main hover:border-indigo-500 transition-all shadow-md md:shadow-sm active:scale-95 flex items-center justify-center"
+          >
+            <i className="fa-solid fa-arrow-left text-2xl md:text-xs"></i>
+          </button>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 items-center pb-0.5 h-16 md:h-auto">
+            <button onClick={() => setSelectedGroupId('all')} className={`px-5 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>All Items</button>
+            {groups.map(g => (<button key={g.id} onClick={() => setSelectedGroupId(g.id)} className={`px-5 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>{g.name}</button>))}
           </div>
         </div>
 
