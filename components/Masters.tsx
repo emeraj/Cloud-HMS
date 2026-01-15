@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState, useRef, useMemo } from 'react';
 import { useApp } from '../store';
 import { FoodType, MenuItem, Captain, Group, Tax, Table } from '../types';
 
@@ -11,6 +12,7 @@ const Masters: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<MasterTab>('Items');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newItem, setNewItem] = useState<Partial<MenuItem>>({ foodType: FoodType.VEG });
@@ -18,6 +20,13 @@ const Masters: React.FC = () => {
   const [newGroup, setNewGroup] = useState<Partial<Group>>({});
   const [newTax, setNewTax] = useState<Partial<Tax>>({});
   const [newTable, setNewTable] = useState<Partial<Table>>({ status: 'Available' });
+
+  // Filtered menu for the gallery
+  const filteredMenu = useMemo(() => {
+    return menu.filter(item => 
+      item.name.toLowerCase().includes(itemSearchQuery.toLowerCase())
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }, [menu, itemSearchQuery]);
 
   const removeCaptain = async (id: string) => {
     if (confirm("Remove Captain?")) await remove("waiters", id);
@@ -181,48 +190,61 @@ const Masters: React.FC = () => {
                 </div>
               </div>
 
-              {/* Items Gallery Display */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {menu.length === 0 ? (
-                  <div className="col-span-full py-20 text-center opacity-20">
-                     <i className="fa-solid fa-utensils text-6xl mb-4 text-slate-400"></i>
-                     <p className="font-black uppercase tracking-widest text-slate-600">No Items Added Yet</p>
-                  </div>
-                ) : (
-                  menu.map(item => (
-                    <div key={item.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col group relative shadow-sm hover:shadow-md transition-shadow">
-                      <div className="aspect-square bg-slate-50 relative overflow-hidden">
-                        {item.imageUrl ? (
-                          <img src={item.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={item.name} />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
-                             <i className="fa-solid fa-image text-3xl"></i>
-                          </div>
-                        )}
-                        <div className="absolute top-2 left-2">
-                           <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border shadow-sm ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-600 bg-emerald-50' : 'border-rose-500/50 text-rose-600 bg-rose-50'}`}>
-                              {item.foodType}
-                           </span>
-                        </div>
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
-                           <button onClick={() => { setNewItem(item); setEditingId(item.id); document.getElementById('item-form')?.scrollIntoView({ behavior: 'smooth' }); }} className="w-10 h-10 rounded-xl bg-white text-slate-900 flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
-                              <i className="fa-solid fa-pen-to-square text-indigo-600"></i>
-                           </button>
-                           <button onClick={() => removeItem(item.id)} className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
-                              <i className="fa-solid fa-trash"></i>
-                           </button>
-                        </div>
-                      </div>
-                      <div className="p-3 flex-1 flex flex-col justify-between">
-                         <h4 className="text-slate-800 font-bold text-xs uppercase leading-tight line-clamp-2 mb-2">{item.name}</h4>
-                         <div className="flex justify-between items-center">
-                            <span className="text-indigo-600 font-black text-sm">₹{item.price}</span>
-                            <span className="text-[9px] font-black text-slate-400 uppercase">{groups.find(g => g.id === item.groupId)?.name || 'Misc'}</span>
-                         </div>
-                      </div>
+              {/* Items Search and Gallery Display */}
+              <div className="space-y-4">
+                <div className="relative group max-w-md">
+                  <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                  <input 
+                    type="text" 
+                    placeholder="Search dishes to edit..." 
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                    value={itemSearchQuery}
+                    onChange={(e) => setItemSearchQuery(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {filteredMenu.length === 0 ? (
+                    <div className="col-span-full py-20 text-center opacity-20">
+                      <i className="fa-solid fa-utensils text-6xl mb-4 text-slate-400"></i>
+                      <p className="font-black uppercase tracking-widest text-slate-600">No Items Found</p>
                     </div>
-                  ))
-                )}
+                  ) : (
+                    filteredMenu.map(item => (
+                      <div key={item.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col group relative shadow-sm hover:shadow-md transition-shadow">
+                        <div className="aspect-square bg-slate-50 relative overflow-hidden">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} className="w-full h-full object-cover transition-transform group-hover:scale-110" alt={item.name} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-300">
+                              <i className="fa-solid fa-image text-3xl"></i>
+                            </div>
+                          )}
+                          <div className="absolute top-2 left-2">
+                            <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase border shadow-sm ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-600 bg-emerald-50' : 'border-rose-500/50 text-rose-600 bg-rose-50'}`}>
+                                {item.foodType}
+                            </span>
+                          </div>
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-3 transition-opacity">
+                            <button onClick={() => { setNewItem(item); setEditingId(item.id); document.getElementById('item-form')?.scrollIntoView({ behavior: 'smooth' }); }} className="w-10 h-10 rounded-xl bg-white text-slate-900 flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                                <i className="fa-solid fa-pen-to-square text-indigo-600"></i>
+                            </button>
+                            <button onClick={() => removeItem(item.id)} className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center hover:scale-110 transition-transform shadow-lg">
+                                <i className="fa-solid fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="p-3 flex-1 flex flex-col justify-between">
+                          <h4 className="text-slate-800 font-bold text-xs uppercase leading-tight line-clamp-2 mb-2">{item.name}</h4>
+                          <div className="flex justify-between items-center">
+                              <span className="text-indigo-600 font-black text-sm">₹{item.price}</span>
+                              <span className="text-[9px] font-black text-slate-400 uppercase">{groups.find(g => g.id === item.groupId)?.name || 'Misc'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}

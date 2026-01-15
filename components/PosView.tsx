@@ -26,6 +26,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showKOTModal, setShowKOTModal] = useState(false);
 
   // Reference to track if the current order was settled by another device
   const isSettledRef = useRef(false);
@@ -41,7 +42,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   // Sync component state with database when existingOrder changes (e.g., from another device)
   useEffect(() => {
     if (existingOrder) {
-      // If we see the order is settled in the DB, mark it so we don't re-open the table
       if (existingOrder.status === 'Settled') {
         isSettledRef.current = true;
       } else {
@@ -64,7 +64,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         lastCloudOrderRef.current = cloudSignature;
       }
     } else if (!existingOrder && currentTable?.status === 'Available') {
-      // Table was cleared by another device
       setCartItems([]);
       setSelectedCaptain('');
       setCustomerName('');
@@ -87,7 +86,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
-  // Robust Bill Number Logic: Last Bill # + 1
   const getNextBillNo = useCallback(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayOrders = orders.filter(o => {
@@ -110,19 +108,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     payMode: 'Cash' | 'UPI' | 'Card',
     currentStatus: 'Pending' | 'Billed' | 'Settled' = 'Pending'
   ) => {
-    // CRITICAL: If table is already available or order is settled, do NOT re-sync/re-open
     if (!activeTable || !currentTable || isSettledRef.current) return;
     
     const isCartEmpty = updatedItems.length === 0;
 
-    // FIX: If cart is empty, immediately clear Table occupancy
     if (isCartEmpty) {
       await upsert("tables", { 
         ...currentTable, 
         status: 'Available', 
         currentOrderId: undefined 
       });
-      // Also remove the order record from database if it was just a draft (no bill no)
       if (existingOrder && existingOrder.status === 'Pending' && (!existingOrder.dailyBillNo || existingOrder.dailyBillNo === '')) {
         await remove("orders", existingOrder.id);
       }
@@ -164,7 +159,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
     await upsert("orders", newOrder);
     
-    // Update table status (Occupied because cart is NOT empty)
     await upsert("tables", { 
       ...currentTable, 
       status: currentStatus === 'Settled' ? 'Available' : 'Occupied', 
@@ -218,7 +212,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
 
-  const handleKOT = async () => {
+  const processKOT = async () => {
+    setShowKOTModal(false);
     if (isSettledRef.current) return;
     let billNo = existingOrder?.dailyBillNo;
     if (!billNo) {
@@ -276,7 +271,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       cashierName: user?.displayName || 'Admin'
     };
 
-    // Mark as settled locally first to prevent re-sync loop
     isSettledRef.current = true;
     
     await upsert("orders", newOrder);
@@ -292,6 +286,48 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   return (
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300 relative">
+      {/* KOT Confirmation Modal */}
+      {showKOTModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-main overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-main bg-slate-50/50 theme-dark:bg-slate-800/50 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black text-main uppercase tracking-widest">Confirm KOT</h3>
+                <p className="text-[10px] font-bold text-muted uppercase">Table {currentTable?.number} • {cartItems.length} Items</p>
+              </div>
+              <button onClick={() => setShowKOTModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-200 theme-dark:hover:bg-slate-700 flex items-center justify-center transition-colors">
+                <i className="fa-solid fa-xmark text-muted"></i>
+              </button>
+            </div>
+            
+            <div className="max-h-[50vh] overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              {cartItems.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-app/40 p-3 rounded-xl border border-main">
+                  <span className="text-[11px] font-black text-main uppercase truncate pr-4">{item.name}</span>
+                  <span className="text-indigo-600 font-black text-xs bg-white theme-dark:bg-slate-700 px-2 py-1 rounded-lg border border-main shadow-sm">x{item.quantity}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-5 bg-slate-50 theme-dark:bg-slate-800/50 border-t border-main grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setShowKOTModal(false)}
+                className="py-4 rounded-2xl bg-white border border-main text-muted font-black uppercase text-[10px] tracking-widest hover:text-rose-500 transition-all active:scale-95 shadow-sm"
+              >
+                Go Back
+              </button>
+              <button 
+                onClick={processKOT}
+                className="py-4 rounded-2xl bg-orange-600 text-white font-black uppercase text-[10px] tracking-widest shadow-lg hover:bg-orange-500 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <i className="fa-solid fa-print"></i>
+                Confirm Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
@@ -328,7 +364,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
-        {/* Large Search Field - Below Tabs and even more prominent */}
+        {/* Search Field */}
         <div className="mb-4 md:mb-6">
           <div className="relative group">
             <i className="fa-solid fa-magnifying-glass absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-sm md:text-base"></i>
@@ -497,7 +533,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
           <div className="flex flex-col gap-2.5">
             <button 
-              onClick={handleKOT} 
+              onClick={() => setShowKOTModal(true)} 
               disabled={cartItems.length === 0 || isSettledRef.current} 
               className="w-full py-3.5 md:py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500"
             >
