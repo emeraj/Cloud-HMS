@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { useApp } from '../store';
 
@@ -38,8 +39,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      {/* Super Compact Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {/* Super Compact Stats Section - Hidden on Mobile */}
+      <div className="hidden md:grid md:grid-cols-3 gap-2">
         {/* Settled Sales Card */}
         <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-main flex items-center justify-between transition-all hover:shadow-md">
           <div className="text-left">
