@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
           <div>
             <h2 className="text-sm md:text-base font-black text-main uppercase tracking-tighter">Floor Management</h2>
-            <p className="text-[7px] font-black uppercase tracking-[2px] text-indigo-500">Live Table Occupancy</p>
+            <p className="text-[9px] font-black uppercase tracking-[2px] text-indigo-500">Live Table Occupancy</p>
           </div>
           
           <div className="flex flex-wrap gap-1.5">
@@ -93,34 +93,34 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-2 md:gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 gap-3 md:gap-3">
           {sortedTables.map(table => (
             <div 
               key={table.id}
               onClick={() => setActiveTable(table.id)}
               className={`
-                relative aspect-square rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 border group
+                relative aspect-square rounded-2xl md:rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all duration-300 border group
                 ${table.status === 'Available' ? 'bg-white theme-dark:bg-slate-800 border-slate-200 hover:border-indigo-500' : ''}
                 ${table.status === 'Occupied' ? 'bg-rose-50 theme-dark:bg-rose-950/20 border-rose-500 text-rose-700 shadow-sm' : ''}
                 ${table.status === 'Billing' ? 'bg-amber-50 theme-dark:bg-amber-950/20 border-amber-400 text-amber-600 shadow-sm' : ''}
               `}
             >
-              <div className={`mb-1 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${
+              <div className={`mb-1.5 md:mb-1 w-7 h-7 md:w-7 md:h-7 flex items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-105 ${
                 table.status === 'Available' ? 'bg-slate-50 theme-dark:bg-slate-700 text-slate-400 group-hover:text-indigo-600' :
                 table.status === 'Occupied' ? 'bg-rose-600 text-white' :
                 'bg-amber-500 text-white'
               }`}>
-                <i className="fa-solid fa-chair text-[9px] md:text-xs"></i>
+                <i className="fa-solid fa-chair text-[10px] md:text-xs"></i>
               </div>
               
               <div className="text-center">
-                <span className={`font-black text-xs md:text-base tracking-tighter block leading-none ${table.status === 'Available' ? 'text-slate-600 theme-dark:text-slate-300' : 'text-slate-900 theme-dark:text-white'}`}>
+                <span className={`font-black text-xl md:text-base tracking-tighter block leading-none ${table.status === 'Available' ? 'text-slate-600 theme-dark:text-slate-300' : 'text-slate-900 theme-dark:text-white'}`}>
                   {table.number}
                 </span>
               </div>
               
-              <div className="absolute top-1.5 right-1.5">
-                <div className={`w-1 h-1 rounded-full ${
+              <div className="absolute top-2 right-2 md:top-1.5 md:right-1.5">
+                <div className={`w-1.5 h-1.5 md:w-1 md:h-1 rounded-full ${
                   table.status === 'Available' ? 'bg-slate-200' :
                   table.status === 'Occupied' ? 'bg-rose-600 animate-pulse' :
                   'bg-amber-500'
