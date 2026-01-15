@@ -295,9 +295,9 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
-        {/* Brand Text Header */}
-        <div className="mb-1 px-1 mt-1 md:mt-0">
-          <h1 className="text-xs md:text-sm font-black text-main tracking-tight uppercase opacity-80">Cloud-HMS</h1>
+        {/* Brand Text Header - Normal size */}
+        <div className="mb-2 px-1 mt-1 md:mt-2">
+          <h1 className="text-xl md:text-3xl font-black text-main tracking-tight uppercase opacity-90 leading-none">Cloud-HMS</h1>
         </div>
 
         {/* Navigation & Group Tabs */}
@@ -371,7 +371,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                 <div className="flex justify-between items-center mt-auto">
                   <span className="text-indigo-600 theme-dark:text-indigo-400 font-black text-[10px] md:text-[12px]">₹{item.price}</span>
                   <div className="w-5 h-5 md:w-6 md:h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm">
-                    <i className="fa-solid fa-plus text-[7px] md:text-[8px]"></i>
+                    <i className="fa-solid fa-plus text-[7px] md:text-8px]"></i>
                   </div>
                 </div>
               </div>
