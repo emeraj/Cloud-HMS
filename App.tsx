@@ -89,26 +89,6 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
   );
 };
 
-const MobileNav: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ activeView, setView }) => {
-  const tabs = [
-    { id: 'Dashboard', icon: 'fa-house', label: 'Home' },
-    { id: 'Masters', icon: 'fa-database', label: 'Data' },
-    { id: 'Reports', icon: 'fa-chart-pie', label: 'Bills' },
-    { id: 'Settings', icon: 'fa-gear', label: 'Config' }
-  ];
-
-  return (
-    <div className="md:hidden fixed bottom-[22px] left-0 right-0 bg-sidebar border-t border-main flex justify-around p-1.5 z-50 transition-colors duration-300 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-      {tabs.map(tab => (
-        <button key={tab.id} onClick={() => setView(tab.id as View)} className={`flex flex-col items-center p-2 flex-1 ${activeView === tab.id ? 'text-indigo-600' : 'text-muted'}`}>
-          <i className={`fa-solid fa-${tab.icon} text-sm`}></i>
-          <span className="text-[8px] mt-1 font-bold uppercase">{tab.label}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
-
 const MainContent: React.FC = () => {
   const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
@@ -269,7 +249,6 @@ const MainContent: React.FC = () => {
                 </div>
               )}
             </main>
-            <MobileNav activeView={activeView} setView={setView} />
             <ScrollingFooter />
           </div>
         )}
