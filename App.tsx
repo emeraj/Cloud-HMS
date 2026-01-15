@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './store';
 import Dashboard from './components/Dashboard';
@@ -123,7 +124,6 @@ const MainContent: React.FC = () => {
 
   const handlePrint = (type: 'BILL' | 'KOT', order: Order) => {
     setPrintData({ type, order });
-    // Increased timeout to 1500ms to ensure QR code image from external API loads fully before printing, especially on 1st load
     setTimeout(() => { window.print(); }, 1500);
   };
 
@@ -178,8 +178,6 @@ const MainContent: React.FC = () => {
               {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
               {activeView === 'Settings' && (
                 <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-                  
-                  {/* Business Configuration Section */}
                   <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
                     <h2 className="text-base md:text-xl font-black mb-8 flex items-center gap-3 text-white uppercase tracking-wider">
                        <i className="fa-solid fa-gears text-indigo-400"></i> BUSINESS CONFIGURATION
@@ -189,11 +187,7 @@ const MainContent: React.FC = () => {
                       <div className="space-y-1">
                         <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">RESTAURANT NAME (LOCKED)</label>
                         <div className="relative">
-                          <input 
-                            className="w-full p-4 bg-slate-100 theme-dark:bg-slate-800/50 border-none rounded-2xl text-slate-500 font-black text-sm outline-none shadow-inner cursor-not-allowed" 
-                            value={settings.name} 
-                            readOnly 
-                          />
+                          <input className="w-full p-4 bg-slate-100 theme-dark:bg-slate-800/50 border-none rounded-2xl text-slate-500 font-black text-sm outline-none shadow-inner cursor-not-allowed" value={settings.name} readOnly />
                           <i className="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-slate-400/50"></i>
                         </div>
                       </div>
@@ -214,45 +208,23 @@ const MainContent: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">FSSAI LICENSE NO.</label>
-                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.fssai || ''} onChange={e => setSettings({...settings, fssai: e.target.value})} />
-                      </div>
-
                       <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-5">
                         <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Master Role Passwords</label>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-1">
                             <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Admin Password</label>
-                            <input 
-                              type="password"
-                              className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
-                              placeholder="e.g., 123"
-                              value={settings.adminPassword || ''} 
-                              onChange={e => setSettings({...settings, adminPassword: e.target.value})} 
-                            />
+                            <input type="password" className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" placeholder="e.g., 123" value={settings.adminPassword || ''} onChange={e => setSettings({...settings, adminPassword: e.target.value})} />
                           </div>
                           <div className="space-y-1">
                             <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest pl-1">Master Operator Password</label>
-                            <input 
-                              type="password"
-                              className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
-                              placeholder="e.g., 000"
-                              value={settings.operatorPassword || ''} 
-                              onChange={e => setSettings({...settings, operatorPassword: e.target.value})} 
-                            />
+                            <input type="password" className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" placeholder="e.g., 000" value={settings.operatorPassword || ''} onChange={e => setSettings({...settings, operatorPassword: e.target.value})} />
                           </div>
                         </div>
                       </div>
 
                       <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-4">
-                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">PAYMENT QR CONFIG (UPI)</label>
-                        <input 
-                          className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" 
-                          placeholder="merchant@upi"
-                          value={settings.upiId || ''} 
-                          onChange={e => setSettings({...settings, upiId: e.target.value})} 
-                        />
+                        <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">UI & PRINT CONFIG</label>
+                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" placeholder="merchant@upi" value={settings.upiId || ''} onChange={e => setSettings({...settings, upiId: e.target.value})} />
                         <div className="space-y-3 pt-2">
                           <label className="flex items-center gap-3 cursor-pointer group">
                             <div className="relative">
@@ -270,7 +242,16 @@ const MainContent: React.FC = () => {
                                 {settings.printGstSummary && <i className="fa-solid fa-check text-[10px] text-white absolute inset-0 flex items-center justify-center"></i>}
                               </div>
                             </div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">PRINT GST HSN/TAX SUMMARY</span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">PRINT GST TAX SUMMARY</span>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative">
+                              <input type="checkbox" className="sr-only" checked={settings.showImages} onChange={e => setSettings({...settings, showImages: e.target.checked})} />
+                              <div className={`w-5 h-5 rounded border transition-all ${settings.showImages ? 'bg-indigo-600 border-indigo-600' : 'bg-slate-700 border-slate-600'}`}>
+                                {settings.showImages && <i className="fa-solid fa-check text-[10px] text-white absolute inset-0 flex items-center justify-center"></i>}
+                              </div>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">SHOW IMAGES IN MENU</span>
                           </label>
                         </div>
                       </div>

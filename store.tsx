@@ -82,6 +82,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     thankYouMessage: 'Visit Us Again!',
     printQrCode: true,
     printGstSummary: true,
+    showImages: true,
     invoiceFormat: 1,
     theme: 'dark',
     adminPassword: '123',

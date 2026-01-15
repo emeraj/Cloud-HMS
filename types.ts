@@ -74,6 +74,7 @@ export interface BusinessSettings {
   thankYouMessage: string;
   printQrCode: boolean;
   printGstSummary: boolean;
+  showImages: boolean;
   invoiceFormat?: 1 | 2; // 1: Tax Invoice, 2: Estimate
   theme?: 'light' | 'dark';
   adminPassword?: string;
