@@ -295,8 +295,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
-        {/* Navigation & Group Tabs - Added top margin for mobile to lower it */}
-        <div className="flex items-center gap-2 mb-3 md:mb-4 mt-1.5 md:mt-0">
+        {/* Brand Text Header */}
+        <div className="mb-1 px-1 mt-1 md:mt-0">
+          <h1 className="text-xs md:text-sm font-black text-main tracking-tight uppercase opacity-80">Cloud-HMS</h1>
+        </div>
+
+        {/* Navigation & Group Tabs */}
+        <div className="flex items-center gap-2 mb-3 md:mb-4">
           <button 
             onClick={onBack} 
             className="flex-shrink-0 w-9 h-9 md:w-10 md:h-10 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95 flex items-center justify-center"
