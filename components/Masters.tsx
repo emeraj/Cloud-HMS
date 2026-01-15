@@ -56,6 +56,31 @@ const Masters: React.FC = () => {
   const handleAddTable = async () => { if (!newTable.number) return; if (tables.some(t => t.number === newTable.number)) { alert("Table number already exists"); return; } await upsert("tables", { id: `T${newTable.number}`, number: newTable.number, status: 'Available' }); setNewTable({ status: 'Available' }); };
   const removeItem = async (id: string) => { if (confirm("Delete this item?")) await remove("menu", id); };
   
+  const exportToExcel = () => {
+    const headers = ["Item Name", "Price (INR)", "Group", "Food Type", "Tax Rate (%)"];
+    const rows = menu.map(item => [
+      item.name.includes(',') ? `"${item.name}"` : item.name,
+      item.price,
+      groups.find(g => g.id === item.groupId)?.name || 'N/A',
+      item.foodType,
+      taxes.find(t => t.id === item.taxId)?.rate || 0
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `restaurant_menu_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const InputLabel = ({ label }: { label: string }) => (<label className="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">{label}</label>);
 
   return (
@@ -88,7 +113,19 @@ const Masters: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-4">
-                <div className="relative group max-w-md"><i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i><input type="text" placeholder="Search dishes to edit..." className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none transition-all" value={itemSearchQuery} onChange={(e) => setItemSearchQuery(e.target.value)} /></div>
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                  <div className="relative group w-full max-w-md">
+                    <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors"></i>
+                    <input type="text" placeholder="Search dishes to edit..." className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 focus:border-indigo-500 focus:bg-white outline-none transition-all shadow-sm" value={itemSearchQuery} onChange={(e) => setItemSearchQuery(e.target.value)} />
+                  </div>
+                  <button 
+                    onClick={exportToExcel}
+                    className="flex-shrink-0 flex items-center gap-3 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-2xl uppercase text-[10px] tracking-widest shadow-lg transition-all active:scale-95"
+                  >
+                    <i className="fa-solid fa-file-excel text-sm"></i>
+                    Export to Excel
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {filteredMenu.length === 0 ? (<div className="col-span-full py-20 text-center opacity-20"><i className="fa-solid fa-utensils text-6xl mb-4 text-slate-400"></i><p className="font-black uppercase tracking-widest text-slate-600">No Items Found</p></div>) : (
                     filteredMenu.map(item => {
