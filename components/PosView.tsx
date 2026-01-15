@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
@@ -294,20 +295,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         
-        <div className="mb-2 md:mb-3">
-          <div className="relative group">
-            <i className="fa-solid fa-magnifying-glass absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-[10px] md:text-xs"></i>
-            <input 
-              type="text" 
-              placeholder="Search dishes..." 
-              className="w-full pr-8 pl-9 md:pr-10 md:pl-10 py-2.5 md:py-3 rounded-xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-[10px] md:text-xs font-bold shadow-sm" 
-              value={searchQuery} 
-              onChange={(e) => setSearchQuery(e.target.value)} 
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 mb-3 md:mb-4">
+        {/* Navigation & Group Tabs - Added top margin for mobile to lower it */}
+        <div className="flex items-center gap-2 mb-3 md:mb-4 mt-1.5 md:mt-0">
           <button 
             onClick={onBack} 
             className="flex-shrink-0 w-9 h-9 md:w-10 md:h-10 bg-card rounded-xl text-muted hover:text-indigo-600 border border-main hover:border-indigo-500 transition-all shadow-sm active:scale-95 flex items-center justify-center"
@@ -334,6 +323,21 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
+        {/* Large Search Field - Below Tabs and even more prominent */}
+        <div className="mb-4 md:mb-6">
+          <div className="relative group">
+            <i className="fa-solid fa-magnifying-glass absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-sm md:text-base"></i>
+            <input 
+              type="text" 
+              placeholder="Search dishes..." 
+              className="w-full pr-10 pl-11 md:pr-12 md:pl-16 py-4 md:py-5 rounded-2xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-xs md:text-sm font-black shadow-md transition-all placeholder:text-muted/50 ring-indigo-500/5 focus:ring-4" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
+          </div>
+        </div>
+
+        {/* Menu Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 overflow-y-auto pr-1 pb-24 md:pb-20 custom-scrollbar">
           {filteredMenu.map(item => (
             <div 
@@ -490,16 +494,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <button 
               onClick={handleKOT} 
               disabled={cartItems.length === 0 || isSettledRef.current} 
-              className="w-full py-4 md:py-5 bg-orange-600 text-white rounded-2xl md:rounded-[2.5rem] font-black uppercase text-[11px] md:text-[13px] tracking-[0.15em] shadow-xl shadow-orange-600/20 disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 hover:bg-orange-500"
+              className="w-full py-3.5 md:py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500"
             >
-              <i className="fa-solid fa-fire text-lg md:text-xl"></i> SEND KOT
+              <i className="fa-solid fa-fire text-xs"></i> SEND KOT
             </button>
             
             <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
               <button 
                 onClick={handleBillAndSettle} 
                 disabled={cartItems.length === 0 || isMobile || isSettledRef.current} 
-                className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl md:rounded-2xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
+                className="w-full py-3.5 md:py-4 bg-emerald-600 text-white rounded-xl font-black uppercase text-[10px] md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"
                 title={isMobile ? "Billing Restricted on Mobile" : ""}
               >
                 <i className="fa-solid fa-receipt text-xs"></i> 
