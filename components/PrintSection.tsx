@@ -114,6 +114,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="text-center mb-1">
             <h1 className="text-[18px] font-black tracking-tight mb-1">{settings.name}</h1>
             <p className="text-[10px] whitespace-pre-line leading-normal px-2">{settings.address}</p>
+            <p className="text-[10px] font-bold mt-1">CONTACT: {settings.phone}</p>
             {settings.fssai && <p className="text-[10px] font-bold mt-1">FSSAI: {settings.fssai}</p>}
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
@@ -237,7 +238,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           {/* Footer Info */}
           <div className="text-center space-y-1 mt-3">
             <p className="font-black text-[12px]">{settings.thankYouMessage}</p>
-            <p className="text-[10px] font-bold">CONTACT: {settings.phone}</p>
           </div>
           
           <div className="text-center py-8">
