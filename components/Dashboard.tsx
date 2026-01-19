@@ -15,7 +15,7 @@ const Dashboard: React.FC = () => {
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayOrders = useMemo(() => orders.filter(o => 
-    new Date(o.timestamp).toISOString().split('T')[0] === todayStr
+    (o.timestamp || '').split('T')[0] === todayStr
   ), [orders, todayStr]);
   
   const settledOrders = useMemo(() => todayOrders.filter(o => o.status === 'Settled' || o.status === 'Billed'), [todayOrders]);
@@ -43,11 +43,11 @@ const Dashboard: React.FC = () => {
   const getTimeElapsed = (timestamp: string): string => {
     const start = new Date(timestamp).getTime();
     const diff = Math.floor((now - start) / 60000);
-    return diff > 0 ? `${diff} Min` : 'Just now';
+    return diff > 0 ? `${diff} MIN` : 'NEW';
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500 pb-10">
       {/* Super Compact Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
         <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-main flex items-center justify-between transition-all hover:shadow-md">
@@ -101,7 +101,7 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 xl:grid-cols-11 gap-4 md:gap-5">
           {sortedTables.map(table => {
             const order = getTableOrder(table);
-            const isBusy = table.status !== 'Available' && order;
+            const isBusy = (table.status === 'Occupied' || table.status === 'Billing') && order;
 
             return (
               <div 
@@ -115,8 +115,8 @@ const Dashboard: React.FC = () => {
                 `}
               >
                 {isBusy && (
-                  <div className="absolute top-3 inset-x-0 text-center">
-                    <span className="text-[10px] md:text-[8px] font-bold uppercase tracking-tighter opacity-80">
+                  <div className="absolute top-4 inset-x-0 text-center">
+                    <span className="text-[9px] md:text-[8px] font-black uppercase tracking-widest opacity-90">
                       {getTimeElapsed(order.timestamp)}
                     </span>
                   </div>
@@ -131,8 +131,8 @@ const Dashboard: React.FC = () => {
                   </div>
                 )}
                 
-                <div className="text-center mt-1">
-                  <span className={`font-black text-lg md:text-sm tracking-tighter block leading-none ${
+                <div className="text-center">
+                  <span className={`font-black text-xl md:text-base tracking-tighter block leading-none ${
                     table.status === 'Available' ? 'text-slate-700 theme-dark:text-slate-300' : 'text-white'
                   }`}>
                     {table.number}
@@ -140,9 +140,9 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {isBusy && (
-                  <div className="absolute bottom-3 inset-x-0 text-center">
-                    <span className="text-[11px] md:text-[9px] font-black tracking-tight">
-                      ₹{order.totalAmount.toFixed(0)}
+                  <div className="absolute bottom-5 inset-x-0 text-center">
+                    <span className="text-[12px] md:text-[10px] font-black tracking-tight bg-white/10 px-2 py-0.5 rounded-full">
+                      ₹{order.totalAmount.toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -156,8 +156,8 @@ const Dashboard: React.FC = () => {
                 </div>
 
                 {table.status !== 'Available' && (
-                  <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-white px-1.5 py-0.5 rounded-md shadow-md border border-main z-20">
-                    <i className="fa-solid fa-eye text-[8px] md:text-[7px] text-slate-400"></i>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-white px-2 py-1 rounded-lg shadow-xl border border-main z-20 flex items-center justify-center">
+                    <i className="fa-solid fa-eye text-[9px] md:text-[8px] text-indigo-600"></i>
                   </div>
                 )}
               </div>
