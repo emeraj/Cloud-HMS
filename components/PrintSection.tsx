@@ -119,7 +119,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          {/* Simple Clean Header: Updated to 'E S T I M A T E' and normal font size */}
+          {/* Simple Clean Header */}
           <div className="border-t border-black border-dashed mt-2 mb-1"></div>
           <div className="text-center py-1">
             <span className="text-[14px] font-black inline-block">
@@ -246,36 +246,41 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="h-12"></div>
         </div>
       ) : (
-        /* KOT Template */
+        /* KOT Template - Refined for clarity and thermal printing */
         <div className="text-center flex flex-col items-stretch">
-          <div className="border-b border-black border-dashed pb-1.5 mb-1.5">
-            <h1 className="text-[14px] font-black tracking-widest">KITCHEN ORDER TICKET</h1>
-            <h2 className="text-[22px] font-black mt-1">KOT #{order.kotCount + 1}</h2>
+          <div className="border-b-2 border-black border-dashed pb-2 mb-2">
+            <h1 className="text-[12px] font-black tracking-[0.2em] mb-1">KITCHEN ORDER TICKET</h1>
+            <div className="flex justify-between items-center px-1">
+               <h2 className="text-[20px] font-black">KOT #{order.kotCount}</h2>
+               <div className="bg-black text-white px-2 py-1 text-[18px] font-black">TBL: {table?.number || 'N/A'}</div>
+            </div>
           </div>
-          <div className="flex justify-between font-black text-[12px] mb-1.5 px-1">
-            <span>TABLE: {table?.number || 'N/A'}</span>
-            <span>{formattedTime}</span>
+          
+          <div className="flex justify-between font-bold text-[10px] mb-2 px-1">
+            <span>TIME: {formattedTime}</span>
+            <span>CAPT: {captain?.name || 'N/A'}</span>
           </div>
-          <div className="text-left text-[10px] mb-2 px-1 font-bold">
-             <span>CAPT: {captain?.name || 'N/A'}</span>
-          </div>
+
           <table className="w-full text-left">
              <thead>
-                <tr className="border-y border-black border-dashed">
-                  <th className="py-2 text-[12px]">ITEM NAME</th>
-                  <th className="py-2 text-center text-[12px]">QTY</th>
+                <tr className="border-y-2 border-black border-dashed">
+                  <th className="py-2 text-[12px] font-black">DISH NAME</th>
+                  <th className="py-2 text-center text-[12px] font-black">QTY</th>
                 </tr>
              </thead>
              <tbody>
                {order.items.map((item, idx) => (
                  <tr key={idx} className="border-b border-black border-dotted">
-                    <td className="py-2.5 font-black text-[14px] leading-tight pr-2">{item.name}</td>
-                    <td className="py-2.5 text-center font-black text-[22px]">{item.quantity}</td>
+                    <td className="py-3 font-black text-[15px] leading-tight pr-2 uppercase">{item.name}</td>
+                    <td className="py-3 text-center font-black text-[28px] border-l border-black border-dotted">{item.quantity}</td>
                  </tr>
                ))}
              </tbody>
           </table>
-          <p className="text-[10px] mt-4 opacity-75 italic font-bold">--- END OF ORDER ---</p>
+          
+          <div className="mt-4 border-t border-black border-dashed pt-2">
+            <p className="text-[11px] font-black italic">--- NEW ITEMS ONLY ---</p>
+          </div>
           
           <div className="text-center py-8">
             <br /><br /><br />
