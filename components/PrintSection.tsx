@@ -106,6 +106,9 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     return acc;
   }, {});
 
+  // Safe KOT display number
+  const safeKotNo = isNaN(Number(order.kotCount)) ? '??' : order.kotCount;
+
   return (
     <div id="print-section" className="text-black bg-white font-mono text-[12px] uppercase leading-tight print-view selection:bg-transparent">
       {type === 'BILL' ? (
@@ -251,7 +254,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="border-b-2 border-black border-dashed pb-2 mb-2">
             <h1 className="text-[12px] font-black tracking-[0.2em] mb-1">KITCHEN ORDER TICKET</h1>
             <div className="flex justify-between items-center px-1">
-               <h2 className="text-[20px] font-black">KOT #{order.kotCount}</h2>
+               <h2 className="text-[20px] font-black">KOT #{safeKotNo}</h2>
                {/* Plain Table Number Display */}
                <div className="text-[22px] font-black">TBL: {table?.number || 'N/A'}</div>
             </div>

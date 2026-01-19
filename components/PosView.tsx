@@ -102,7 +102,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const getNextBillNo = useCallback(() => {
     const todayStr = new Date().toISOString().split('T')[0];
     const todayOrders = orders.filter(o => {
-      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
+      const orderDate = (o.timestamp || '').split('T')[0];
       return orderDate === todayStr && o.dailyBillNo && o.dailyBillNo !== '';
     });
     const maxNum = todayOrders.reduce((max, o) => {
@@ -203,10 +203,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       return;
     }
 
-    // Incremental numbering logic based on ALL KOTs issued today
+    // Harden the incremental numbering logic to avoid NaN
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayKots = kots.filter(k => k.timestamp.split('T')[0] === todayStr);
-    const maxKotNo = todayKots.reduce((max, k) => Math.max(max, k.kotNo), 0);
+    const todayKots = kots.filter(k => k.timestamp && k.timestamp.split('T')[0] === todayStr);
+    
+    // Safely find maximum KOT number today across all tables
+    const maxKotNo = todayKots.reduce((max, k) => {
+      const val = Number(k.kotNo);
+      return isNaN(val) ? max : Math.max(max, val);
+    }, 0);
     const newKotNo = maxKotNo + 1;
     
     const orderId = existingOrder?.id || `ORD-${Date.now()}`;
@@ -257,7 +262,20 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     if (!currentTable || isMobile || isSettledRef.current) return;
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     let dailyBillNo = existingOrder?.dailyBillNo || getNextBillNo();
-    const newOrder: Order = { id: orderId, dailyBillNo, tableId: activeTable!, captainId: selectedCaptain, items: cartItems, status: 'Settled', timestamp: existingOrder?.timestamp || new Date().toISOString(), ...totals, kotCount: existingOrder?.kotCount || 0, customerName, paymentMode, cashierName: user?.displayName || 'Admin' };
+    const newOrder: Order = { 
+      id: orderId, 
+      dailyBillNo, 
+      tableId: activeTable!, 
+      captainId: selectedCaptain, 
+      items: cartItems, 
+      status: 'Settled', 
+      timestamp: existingOrder?.timestamp || new Date().toISOString(), 
+      ...totals, 
+      kotCount: existingOrder?.kotCount || 0, 
+      customerName, 
+      paymentMode, 
+      cashierName: user?.displayName || 'Admin' 
+    };
     isSettledRef.current = true;
     await upsert("orders", newOrder);
     await upsert("tables", { ...currentTable, status: 'Available', currentOrderId: undefined });
