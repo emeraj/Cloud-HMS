@@ -252,7 +252,8 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <h1 className="text-[12px] font-black tracking-[0.2em] mb-1">KITCHEN ORDER TICKET</h1>
             <div className="flex justify-between items-center px-1">
                <h2 className="text-[20px] font-black">KOT #{order.kotCount}</h2>
-               <div className="bg-black text-white px-2 py-1 text-[18px] font-black">TBL: {table?.number || 'N/A'}</div>
+               {/* Plain Table Number Display */}
+               <div className="text-[22px] font-black">TBL: {table?.number || 'N/A'}</div>
             </div>
           </div>
           
