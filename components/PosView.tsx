@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
-import { GoogleGenAI, Type } from "@google/genai";
 
 interface PosViewProps {
   onBack: () => void;
@@ -29,13 +28,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showKOTModal, setShowKOTModal] = useState(false);
 
-  // Voice States
-  const [isListening, setIsListening] = useState(false);
-  const [voiceTranscript, setVoiceTranscript] = useState('');
-  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
-
   const isSettledRef = useRef(false);
-  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -261,71 +254,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     onBack();
   };
 
-  // AI Voice Recognition Logic
-  const parseVoiceCommandWithAI = async (transcript: string) => {
-    setIsProcessingVoice(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const menuContext = menu.map(m => ({ id: m.id, name: m.name })).slice(0, 100); // Limit context size
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Given the spoken order: "${transcript}" and the following menu: ${JSON.stringify(menuContext)}, identify items and quantities. Return ONLY a JSON array like [{"id": "item-id", "qty": 2}]. If an item is not found, skip it. Do not include extra text.`,
-      });
-
-      const parsedItems = JSON.parse(response.text || '[]');
-      for (const voiceItem of parsedItems) {
-        const menuItem = menu.find(m => m.id === voiceItem.id);
-        if (menuItem) {
-          addToCart(menuItem, voiceItem.qty);
-        }
-      }
-    } catch (err) {
-      console.error("AI Voice Parse Error:", err);
-    } finally {
-      setIsProcessingVoice(false);
-      setVoiceTranscript('');
-    }
-  };
-
-  const startVoiceControl = () => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert("Voice recognition is not supported in this browser.");
-      return;
-    }
-
-    if (recognitionRef.current) recognitionRef.current.stop();
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'en-IN';
-    recognition.interimResults = true;
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((result: any) => result[0])
-        .map((result: any) => result.transcript)
-        .join('');
-      setVoiceTranscript(transcript);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      if (voiceTranscript) {
-        parseVoiceCommandWithAI(voiceTranscript);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      console.error("Speech Recognition Error", event.error);
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
-
   const newItemsForKOTPreview = useMemo(() => {
     return cartItems.map(item => {
       const diff = item.quantity - (item.printedQty || 0);
@@ -335,31 +263,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   return (
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300 relative">
-      {/* Voice Recognition Overlay */}
-      {isListening && (
-        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
-           <div className="relative mb-12">
-              <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(79,70,229,0.4)] animate-pulse">
-                <i className="fa-solid fa-microphone text-white text-5xl"></i>
-              </div>
-              <div className="absolute inset-0 w-32 h-32 rounded-full border-4 border-indigo-500/30 animate-ping"></div>
-           </div>
-           <h3 className="text-white text-2xl font-black uppercase tracking-widest mb-4">Listening for order...</h3>
-           <div className="max-w-md w-full bg-white/10 p-6 rounded-3xl border border-white/20 text-center">
-              <p className="text-indigo-200 text-lg font-black italic">"{voiceTranscript || 'Say something like: 2 Paneer Tikka...'}"</p>
-           </div>
-           <button onClick={() => recognitionRef.current?.stop()} className="mt-12 px-10 py-4 bg-rose-600 text-white font-black rounded-full uppercase tracking-widest text-sm shadow-xl hover:bg-rose-500 transition-all">Stop Listening</button>
-        </div>
-      )}
-
-      {/* Processing Loader */}
-      {isProcessingVoice && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-10">
-          <i className="fa-solid fa-brain animate-bounce"></i>
-          <span className="text-xs font-black uppercase tracking-widest">AI processing order...</span>
-        </div>
-      )}
-
       {showKOTModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-main overflow-hidden animate-in zoom-in-95 duration-200">
@@ -392,7 +295,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
         <div className="mb-2 px-1 mt-1 md:mt-2 flex justify-between items-center">
           <h1 className="text-2xl md:text-3xl font-black text-main tracking-tight uppercase opacity-90 leading-none">Cloud-HMS</h1>
-          <button onClick={startVoiceControl} className="md:hidden w-12 h-12 bg-indigo-600 rounded-2xl text-white shadow-lg active:scale-90 flex items-center justify-center border-2 border-indigo-500/50"><i className="fa-solid fa-microphone text-xl"></i></button>
         </div>
 
         <div className="flex items-center gap-3 mb-3 md:mb-4">
@@ -414,16 +316,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <i className="fa-solid fa-magnifying-glass absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-sm md:text-base"></i>
             <input type="text" placeholder="Search dishes..." className="w-full pr-10 pl-11 md:pr-12 md:pl-16 py-4.5 md:py-5 rounded-2xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-sm md:text-sm font-black shadow-md transition-all placeholder:text-muted/50 ring-indigo-500/5 focus:ring-4" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
-          <button 
-            onClick={startVoiceControl}
-            className="hidden md:flex w-[70px] bg-card border border-main rounded-2xl items-center justify-center text-indigo-600 hover:bg-indigo-50 transition-all shadow-md group active:scale-95"
-            title="AI Voice Recognition"
-          >
-            <div className="relative">
-               <i className="fa-solid fa-microphone text-xl group-hover:scale-110 transition-transform"></i>
-               <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></div>
-            </div>
-          </button>
         </div>
 
         {/* Dynamic Grid vs List View based on settings.showImages */}
@@ -553,7 +445,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
 
         <div className="p-4 md:p-4 bg-card border-t border-main">
-          {/* Payment Mode Selection Buttons Removed to make more room for cart details */}
           <div className="space-y-1.5 mb-4 md:mb-4 text-[11px] md:text-[10px] font-bold uppercase text-muted">
             <div className="flex justify-between"><span>Base Amount</span><span className="text-main">₹{totals.subTotal.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total Taxes</span><span className="text-main">₹{totals.taxAmount.toFixed(2)}</span></div>
