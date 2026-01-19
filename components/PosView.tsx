@@ -197,7 +197,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     const itemsToPrint = cartItems.map(item => {
       const previouslyPrinted = item.printedQty || 0;
       const diff = item.quantity - previouslyPrinted;
-      // If user reduced quantity, we don't print negative. Just skip.
       return diff > 0 ? { ...item, quantity: diff } : null;
     }).filter(Boolean) as OrderItem[];
 
@@ -206,9 +205,16 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       return;
     }
 
-    // 2. Prepare order update data
-    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
-    const newKotCount = (existingOrder?.kotCount || 0) + 1;
+    // 2. Calculate INCREMENTAL GLOBAL KOT NUMBER for today
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayOrders = orders.filter(o => {
+      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
+      return orderDate === todayStr;
+    });
+    
+    // Find the highest KOT number across ALL tables today
+    const maxGlobalKot = todayOrders.reduce((max, o) => Math.max(max, o.kotCount || 0), 0);
+    const newKotCount = maxGlobalKot + 1;
     
     // Mark all current quantities as "printed"
     const updatedCartItems = cartItems.map(item => ({
@@ -218,14 +224,14 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
     const finalOrderData: Order = {
       id: existingOrder?.id || `ORD-${Date.now()}`,
-      dailyBillNo: billNo,
+      dailyBillNo: existingOrder?.dailyBillNo || '', // Don't assign bill no yet if not billing
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: updatedCartItems,
       status: 'Pending',
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       ...totals,
-      kotCount: newKotCount,
+      kotCount: newKotCount, // Stores the LATEST global KOT number for this order
       customerName,
       paymentMode,
       cashierName: user?.displayName || 'Admin'
@@ -238,7 +244,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     // Update local state to reflect the printed quantities
     setCartItems(updatedCartItems);
 
-    // 4. Print ONLY the itemsToPrint
+    // 4. Print ONLY the itemsToPrint with the NEW GLOBAL KOT NO
     onPrint('KOT', { ...finalOrderData, items: itemsToPrint });
   };
 
