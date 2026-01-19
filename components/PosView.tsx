@@ -168,7 +168,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       updatedItems = cartItems.map((i, idx) => idx === existingIndex ? { ...i, quantity: i.quantity + qty } : i);
     } else {
       const taxRate = taxes.find(t => t.id === item.taxId)?.rate || 0;
-      updatedItems = [...cartItems, { id: Math.random().toString(36).substr(2, 9), menuItemId: item.id, name: item.name, price: item.price, quantity: qty, taxRate }];
+      updatedItems = [...cartItems, { 
+        id: Math.random().toString(36).substr(2, 9), 
+        menuItemId: item.id, 
+        name: item.name, 
+        price: item.price, 
+        quantity: qty, 
+        taxRate,
+        printedQty: 0 // Initialize printedQty for new items
+      }];
     }
     setCartItems(updatedItems);
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
@@ -191,18 +199,54 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const processKOT = async () => {
     setShowKOTModal(false);
     if (isSettledRef.current) return;
-    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
-    if (existingOrder) {
-      const updatedOrder = { ...existingOrder, dailyBillNo: billNo, kotCount: (existingOrder.kotCount || 0) + 1 };
-      await upsert("orders", updatedOrder);
-      onPrint('KOT', updatedOrder);
-    } else {
-      const orderId = `ORD-${Date.now()}`;
-      const newOrder: Order = { id: orderId, dailyBillNo: billNo, tableId: activeTable!, captainId: selectedCaptain, items: cartItems, status: 'Pending', timestamp: new Date().toISOString(), ...totals, kotCount: 1, customerName, paymentMode, cashierName: user?.displayName || 'Admin' };
-      await upsert("orders", newOrder);
-      await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
-      onPrint('KOT', newOrder);
+    
+    // 1. Identify "New" items (quantities added since last KOT)
+    const itemsToPrint = cartItems.map(item => {
+      const previouslyPrinted = item.printedQty || 0;
+      const diff = item.quantity - previouslyPrinted;
+      // If user reduced quantity, we don't print negative. Just skip.
+      return diff > 0 ? { ...item, quantity: diff } : null;
+    }).filter(Boolean) as OrderItem[];
+
+    if (itemsToPrint.length === 0) {
+      alert("No new items to send to Kitchen.");
+      return;
     }
+
+    // 2. Prepare order update data
+    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
+    const newKotCount = (existingOrder?.kotCount || 0) + 1;
+    
+    // Mark all current quantities as "printed"
+    const updatedCartItems = cartItems.map(item => ({
+      ...item,
+      printedQty: item.quantity
+    }));
+
+    const finalOrderData: Order = {
+      id: existingOrder?.id || `ORD-${Date.now()}`,
+      dailyBillNo: billNo,
+      tableId: activeTable!,
+      captainId: selectedCaptain,
+      items: updatedCartItems,
+      status: 'Pending',
+      timestamp: existingOrder?.timestamp || new Date().toISOString(),
+      ...totals,
+      kotCount: newKotCount,
+      customerName,
+      paymentMode,
+      cashierName: user?.displayName || 'Admin'
+    };
+
+    // 3. Save to Cloud
+    await upsert("orders", finalOrderData);
+    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: finalOrderData.id });
+    
+    // Update local state to reflect the printed quantities
+    setCartItems(updatedCartItems);
+
+    // 4. Print ONLY the itemsToPrint
+    onPrint('KOT', { ...finalOrderData, items: itemsToPrint });
   };
 
   const handleBillAndSettle = async () => {
@@ -227,9 +271,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Given the spoken order: "${transcript}" and the following menu: ${JSON.stringify(menuContext)}, identify items and quantities. Return ONLY a JSON array like [{"id": "item-id", "qty": 2}]. If an item is not found, skip it. Do not include extra text.`,
-        config: {
-          // Response schema is actually for the result, not here
-        }
       });
 
       const parsedItems = JSON.parse(response.text || '[]');
@@ -285,6 +326,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     recognition.start();
   };
 
+  const newItemsForKOTPreview = useMemo(() => {
+    return cartItems.map(item => {
+      const diff = item.quantity - (item.printedQty || 0);
+      return diff > 0 ? { ...item, quantity: diff } : null;
+    }).filter(Boolean) as OrderItem[];
+  }, [cartItems]);
+
   return (
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300 relative">
       {/* Voice Recognition Overlay */}
@@ -318,21 +366,23 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             <div className="p-5 border-b border-main bg-slate-50/50 theme-dark:bg-slate-800/50 flex justify-between items-center">
               <div>
                 <h3 className="text-lg md:text-sm font-black text-main uppercase tracking-widest">Confirm KOT</h3>
-                <p className="text-xs md:text-[10px] font-bold text-muted uppercase">Table {currentTable?.number} • {cartItems.length} Items</p>
+                <p className="text-xs md:text-[10px] font-bold text-muted uppercase">Table {currentTable?.number} • {newItemsForKOTPreview.length} New Items</p>
               </div>
               <button onClick={() => setShowKOTModal(false)} className="w-10 h-10 rounded-full hover:bg-slate-200 theme-dark:hover:bg-slate-700 flex items-center justify-center transition-colors"><i className="fa-solid fa-xmark text-muted"></i></button>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {cartItems.map((item, idx) => (
+              {newItemsForKOTPreview.length > 0 ? newItemsForKOTPreview.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center bg-app/40 p-3 rounded-xl border border-main">
                   <span className="text-sm md:text-[11px] font-black text-main uppercase truncate pr-4">{item.name}</span>
                   <span className="text-indigo-600 font-black text-sm md:text-xs bg-white theme-dark:bg-slate-700 px-2 py-1 rounded-lg border border-main shadow-sm">x{item.quantity}</span>
                 </div>
-              ))}
+              )) : (
+                <p className="text-center text-xs font-black text-rose-500 uppercase p-6">No new items added to cart!</p>
+              )}
             </div>
             <div className="p-5 bg-slate-50 theme-dark:bg-slate-800/50 border-t border-main grid grid-cols-2 gap-3">
               <button onClick={() => setShowKOTModal(false)} className="py-4 rounded-2xl bg-white border border-main text-muted font-black uppercase text-xs md:text-[10px] tracking-widest hover:text-rose-500 transition-all active:scale-95 shadow-sm">Go Back</button>
-              <button onClick={processKOT} className="py-4 rounded-2xl bg-orange-600 text-white font-black uppercase text-xs md:text-[10px] tracking-widest shadow-lg hover:bg-orange-500 active:scale-95 transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-print"></i>Confirm Print</button>
+              <button onClick={processKOT} disabled={newItemsForKOTPreview.length === 0} className="py-4 rounded-2xl bg-orange-600 text-white font-black uppercase text-xs md:text-[10px] tracking-widest shadow-lg hover:bg-orange-500 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-30"><i className="fa-solid fa-print"></i>Confirm Print</button>
             </div>
           </div>
         </div>
