@@ -10,7 +10,7 @@ interface ReportsProps {
 
 const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const { orders, captains, setActiveTable, tables, upsert, remove } = useApp();
-  const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
+  const [reportType, setReportType] = useState<'DayBook' | 'KOTReport' | 'ItemSummary' | 'CaptainWise'>('DayBook');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -18,19 +18,25 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   const finalizedOrders = useMemo(() => {
     return orders.filter(o => {
       const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
-      // EXCLUDE DRAFTS: Only show orders that have been assigned a Bill Number
+      // Only show orders that have been assigned a Bill Number for DayBook
       return orderDate === selectedDate && o.dailyBillNo && o.dailyBillNo !== '';
     }).sort((a, b) => {
-      // Numerical sort by Bill Number (Descending)
       const numA = parseInt(a.dailyBillNo);
       const numB = parseInt(b.dailyBillNo);
       return numB - numA;
     });
   }, [orders, selectedDate]);
 
+  // Filtered orders for KOT Report
+  const kotOrders = useMemo(() => {
+    return orders.filter(o => {
+      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
+      return orderDate === selectedDate && o.kotCount > 0;
+    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [orders, selectedDate]);
+
   const settledOrders = useMemo(() => finalizedOrders.filter(o => o.status === 'Settled' || o.status === 'Billed'), [finalizedOrders]);
   
-  // Real-time stats recalculation based on finalized/billed orders
   const stats = useMemo(() => {
     const total = settledOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
     const count = settledOrders.length;
@@ -160,19 +166,25 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
             onClick={() => setReportType('DayBook')} 
             className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'DayBook' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
           >
-            DayBook (Final Bills)
+            DayBook
+          </button>
+          <button 
+            onClick={() => setReportType('KOTReport')} 
+            className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'KOTReport' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+          >
+            KOT Report
           </button>
           <button 
             onClick={() => setReportType('ItemSummary')} 
             className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'ItemSummary' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
           >
-            Item Wise Sales
+            Item Sales
           </button>
           <button 
             onClick={() => setReportType('CaptainWise')} 
             className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'CaptainWise' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
           >
-            Captains Reports
+            Captains Performance
           </button>
         </div>
 
@@ -232,6 +244,58 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                         </td>
                       </tr>
                     ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportType === 'KOTReport' && (
+            <div className="overflow-x-auto rounded-lg border border-slate-200 theme-dark:border-slate-700">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 theme-dark:bg-slate-900 text-[9px] font-black text-slate-500 uppercase">
+                  <tr>
+                    <th className="p-3">KOT #</th>
+                    <th className="p-3">Table</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3">Time</th>
+                    <th className="p-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white theme-dark:bg-slate-800 text-[11px]">
+                  {kotOrders.length === 0 ? (
+                    <tr><td colSpan={6} className="p-10 text-center text-slate-400 font-bold uppercase italic tracking-wider">No KOTs found for {selectedDate}</td></tr>
+                  ) : (
+                    kotOrders.map(order => {
+                      const table = tables.find(t => t.id === order.tableId);
+                      const totalQty = order.items.reduce((sum, i) => sum + i.quantity, 0);
+                      return (
+                        <tr key={order.id} className="border-b border-slate-100 theme-dark:border-slate-700 last:border-0 hover:bg-slate-50 theme-dark:hover:bg-slate-700/50 transition-colors">
+                          <td className="p-3">
+                            <div className="font-mono font-black text-orange-600 theme-dark:text-orange-400">KOT-{order.kotCount}</div>
+                          </td>
+                          <td className="p-3 font-bold text-slate-700 theme-dark:text-slate-300">TBL: {table?.number || 'N/A'}</td>
+                          <td className="p-3 text-slate-500 font-medium">
+                            {new Date(order.timestamp).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="p-3 text-center text-slate-900 theme-dark:text-white font-black">{totalQty}</td>
+                          <td className="p-3 text-slate-500 font-medium">
+                            {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex justify-center">
+                              <button 
+                                onClick={() => onPrint?.('KOT', order)} 
+                                className="px-3 py-1.5 rounded-lg bg-orange-600 text-white font-black text-[9px] uppercase tracking-widest shadow-sm hover:bg-orange-500 transition-all flex items-center gap-2"
+                              >
+                                <i className="fa-solid fa-print"></i> Re-print KOT
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
