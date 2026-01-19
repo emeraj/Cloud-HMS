@@ -33,7 +33,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
               <tr className="border-b border-black border-dashed">
                 <th className="py-1 font-black">BILL #</th>
                 <th className="py-1 font-black">TIME</th>
-                <th className="py-1 font-black">CASHIER</th>
+                <th className="py-1 font-black">STAFF</th>
                 <th className="py-1 text-right font-black">AMOUNT</th>
               </tr>
             </thead>

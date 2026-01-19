@@ -1,5 +1,7 @@
 {
   "name": "Cloud-HMS - Professional Indian Restaurant System",
   "description": "A comprehensive billing and management system for Veg/Non-Veg Indian hotels with multi-table support, KOT generation, GST calculations, and detailed reporting.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

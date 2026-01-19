@@ -29,6 +29,7 @@ export interface MenuItem {
   taxId: string;
   foodType: FoodType;
   imageUrl?: string;
+  isFavorite?: boolean;
 }
 
 export interface OrderItem {
@@ -38,6 +39,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   taxRate: number;
+  printedQty?: number; // Tracks how many have been KOT printed
 }
 
 export interface Table {

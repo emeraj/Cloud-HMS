@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
 import { MenuItem, OrderItem, Order, FoodType } from '../types';
+import { GoogleGenAI, Type } from "@google/genai";
 
 interface PosViewProps {
   onBack: () => void;
@@ -28,7 +29,13 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showKOTModal, setShowKOTModal] = useState(false);
 
+  // Voice States
+  const [isListening, setIsListening] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState('');
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+
   const isSettledRef = useRef(false);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -37,6 +44,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   }, []);
 
   const lastCloudOrderRef = useRef<string | null>(null);
+
+  // Helper to find captain ID matching the logged in user's name
+  const getMatchingCaptainId = useCallback(() => {
+    if (!user?.displayName || captains.length === 0) return '';
+    const match = captains.find(c => 
+      c.name.trim().toLowerCase() === user.displayName?.trim().toLowerCase()
+    );
+    return match ? match.id : '';
+  }, [user, captains]);
 
   useEffect(() => {
     if (existingOrder) {
@@ -58,18 +74,30 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       }
     } else if (!existingOrder && currentTable?.status === 'Available') {
       setCartItems([]);
-      setSelectedCaptain('');
+      setSelectedCaptain(getMatchingCaptainId());
       setCustomerName('');
       lastCloudOrderRef.current = null;
       isSettledRef.current = false;
     }
-  }, [existingOrder, currentTable?.status]);
+  }, [existingOrder, currentTable?.status, getMatchingCaptainId]);
+
+  useEffect(() => {
+    if (!existingOrder && !selectedCaptain && user?.displayName && captains.length > 0) {
+      const matchId = getMatchingCaptainId();
+      if (matchId) setSelectedCaptain(matchId);
+    }
+  }, [captains, user, existingOrder, selectedCaptain, getMatchingCaptainId]);
 
   const filteredMenu = useMemo(() => {
     return menu.filter(item => {
+      if (selectedGroupId === 'favorites') return !!item.isFavorite;
       const matchGroup = selectedGroupId === 'all' || item.groupId === selectedGroupId;
       const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchGroup && matchSearch;
+    }).sort((a, b) => {
+      if (a.isFavorite && !b.isFavorite) return -1;
+      if (!a.isFavorite && b.isFavorite) return 1;
+      return a.name.localeCompare(b.name);
     });
   }, [menu, selectedGroupId, searchQuery]);
 
@@ -132,15 +160,15 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     await upsert("tables", { ...currentTable, status: currentStatus === 'Settled' ? 'Available' : 'Occupied', currentOrderId: currentStatus === 'Settled' ? undefined : orderId });
   }, [activeTable, currentTable, existingOrder, upsert, remove, user]);
 
-  const addToCart = async (item: MenuItem) => {
+  const addToCart = async (item: MenuItem, qty: number = 1) => {
     if (isSettledRef.current) return;
     let updatedItems: OrderItem[] = [];
-    const existing = cartItems.find(i => i.menuItemId === item.id);
-    if (existing) {
-      updatedItems = cartItems.map(i => i.menuItemId === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+    const existingIndex = cartItems.findIndex(i => i.menuItemId === item.id);
+    if (existingIndex > -1) {
+      updatedItems = cartItems.map((i, idx) => idx === existingIndex ? { ...i, quantity: i.quantity + qty } : i);
     } else {
       const taxRate = taxes.find(t => t.id === item.taxId)?.rate || 0;
-      updatedItems = [...cartItems, { id: Math.random().toString(36).substr(2, 9), menuItemId: item.id, name: item.name, price: item.price, quantity: 1, taxRate }];
+      updatedItems = [...cartItems, { id: Math.random().toString(36).substr(2, 9), menuItemId: item.id, name: item.name, price: item.price, quantity: qty, taxRate, printedQty: 0 }];
     }
     setCartItems(updatedItems);
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
@@ -163,18 +191,61 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const processKOT = async () => {
     setShowKOTModal(false);
     if (isSettledRef.current) return;
-    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
-    if (existingOrder) {
-      const updatedOrder = { ...existingOrder, dailyBillNo: billNo, kotCount: (existingOrder.kotCount || 0) + 1 };
-      await upsert("orders", updatedOrder);
-      onPrint('KOT', updatedOrder);
-    } else {
-      const orderId = `ORD-${Date.now()}`;
-      const newOrder: Order = { id: orderId, dailyBillNo: billNo, tableId: activeTable!, captainId: selectedCaptain, items: cartItems, status: 'Pending', timestamp: new Date().toISOString(), ...totals, kotCount: 1, customerName, paymentMode, cashierName: user?.displayName || 'Admin' };
-      await upsert("orders", newOrder);
-      await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
-      onPrint('KOT', newOrder);
+    
+    // Calculate new items only for printing
+    const newItemsOnly = cartItems
+      .map(item => ({
+        ...item,
+        quantity: item.quantity - (item.printedQty || 0)
+      }))
+      .filter(item => item.quantity > 0);
+
+    if (newItemsOnly.length === 0) {
+      alert("No new items to print.");
+      return;
     }
+
+    // Update printedQty to current quantity for all items
+    const updatedCartWithPrinted = cartItems.map(item => ({
+      ...item,
+      printedQty: item.quantity
+    }));
+
+    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
+    let currentKOTCount = (existingOrder?.kotCount || 0);
+
+    const subTotal = updatedCartWithPrinted.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const taxAmount = updatedCartWithPrinted.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
+    const totalAmount = subTotal + taxAmount;
+
+    let orderId = existingOrder?.id || `ORD-${Date.now()}`;
+    const fullOrder: Order = { 
+      id: orderId, 
+      dailyBillNo: billNo, 
+      tableId: activeTable!, 
+      captainId: selectedCaptain, 
+      items: updatedCartWithPrinted, 
+      status: 'Pending', 
+      timestamp: existingOrder?.timestamp || new Date().toISOString(), 
+      subTotal, taxAmount, totalAmount, 
+      kotCount: currentKOTCount + 1, 
+      customerName, 
+      paymentMode, 
+      cashierName: user?.displayName || 'Admin' 
+    };
+
+    // Create a temporary order object for the print engine that only has the DELTA items
+    const printOrder: Order = {
+      ...fullOrder,
+      items: newItemsOnly
+    };
+
+    await upsert("orders", fullOrder);
+    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
+    setCartItems(updatedCartWithPrinted);
+    
+    // Print only the new items
+    onPrint('KOT', printOrder);
   };
 
   const handleBillAndSettle = async () => {
@@ -189,8 +260,112 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     onBack();
   };
 
+  // AI Voice Recognition Logic
+  const parseVoiceCommandWithAI = async (transcript: string) => {
+    setIsProcessingVoice(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const menuContext = menu.map(m => ({ id: m.id, name: m.name })).slice(0, 100); // Limit context size
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Given the spoken order: "${transcript}" and the following menu: ${JSON.stringify(menuContext)}, identify items and quantities. Return ONLY a JSON array like [{"id": "item-id", "qty": 2}]. If an item is not found, skip it. Do not include extra text.`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                id: { type: Type.STRING },
+                qty: { type: Type.NUMBER }
+              },
+              required: ["id", "qty"]
+            }
+          }
+        }
+      });
+
+      const parsedItems = JSON.parse(response.text || '[]');
+      for (const voiceItem of parsedItems) {
+        const menuItem = menu.find(m => m.id === voiceItem.id);
+        if (menuItem) {
+          addToCart(menuItem, voiceItem.qty);
+        }
+      }
+    } catch (err) {
+      console.error("AI Voice Parse Error:", err);
+    } finally {
+      setIsProcessingVoice(false);
+      setVoiceTranscript('');
+    }
+  };
+
+  const startVoiceControl = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser.");
+      return;
+    }
+
+    if (recognitionRef.current) recognitionRef.current.stop();
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN';
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0])
+        .map((result: any) => result.transcript)
+        .join('');
+      setVoiceTranscript(transcript);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      if (voiceTranscript) {
+        parseVoiceCommandWithAI(voiceTranscript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech Recognition Error", event.error);
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
   return (
     <div className="flex flex-col h-screen md:flex-row bg-app text-main overflow-hidden animate-in zoom-in-95 duration-300 relative">
+      {/* Voice Recognition Overlay */}
+      {isListening && (
+        <div className="fixed inset-0 z-[110] bg-slate-900/60 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-in fade-in duration-300">
+           <div className="relative mb-12">
+              <div className="w-32 h-32 bg-indigo-600 rounded-full flex items-center justify-center shadow-[0_0_60px_rgba(79,70,229,0.4)] animate-pulse">
+                <i className="fa-solid fa-microphone text-white text-5xl"></i>
+              </div>
+              <div className="absolute inset-0 w-32 h-32 rounded-full border-4 border-indigo-500/30 animate-ping"></div>
+           </div>
+           <h3 className="text-white text-2xl font-black uppercase tracking-widest mb-4">Listening for order...</h3>
+           <div className="max-w-md w-full bg-white/10 p-6 rounded-3xl border border-white/20 text-center">
+              <p className="text-indigo-200 text-lg font-black italic">"{voiceTranscript || 'Say something like: 2 Paneer Tikka...'}"</p>
+           </div>
+           <button onClick={() => recognitionRef.current?.stop()} className="mt-12 px-10 py-4 bg-rose-600 text-white font-black rounded-full uppercase tracking-widest text-sm shadow-xl hover:bg-rose-500 transition-all">Stop Listening</button>
+        </div>
+      )}
+
+      {/* Processing Loader */}
+      {isProcessingVoice && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-indigo-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 animate-in slide-in-from-bottom-10">
+          <i className="fa-solid fa-brain animate-bounce"></i>
+          <span className="text-xs font-black uppercase tracking-widest">AI processing order...</span>
+        </div>
+      )}
+
       {showKOTModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card w-full max-w-md rounded-3xl shadow-2xl border border-main overflow-hidden animate-in zoom-in-95 duration-200">
@@ -202,12 +377,20 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
               <button onClick={() => setShowKOTModal(false)} className="w-10 h-10 rounded-full hover:bg-slate-200 theme-dark:hover:bg-slate-700 flex items-center justify-center transition-colors"><i className="fa-solid fa-xmark text-muted"></i></button>
             </div>
             <div className="max-h-[50vh] overflow-y-auto p-4 space-y-2 custom-scrollbar">
-              {cartItems.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center bg-app/40 p-3 rounded-xl border border-main">
-                  <span className="text-sm md:text-[11px] font-black text-main uppercase truncate pr-4">{item.name}</span>
-                  <span className="text-indigo-600 font-black text-sm md:text-xs bg-white theme-dark:bg-slate-700 px-2 py-1 rounded-lg border border-main shadow-sm">x{item.quantity}</span>
-                </div>
-              ))}
+              {cartItems.map((item, idx) => {
+                const isNew = item.quantity > (item.printedQty || 0);
+                return (
+                  <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border border-main ${isNew ? 'bg-indigo-50 border-indigo-200' : 'bg-app/40 opacity-60'}`}>
+                    <div className="flex flex-col">
+                      <span className="text-sm md:text-[11px] font-black text-main uppercase truncate pr-4">{item.name}</span>
+                      {isNew && <span className="text-[8px] font-black text-indigo-600 uppercase">New to Kitchen</span>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <span className="text-indigo-600 font-black text-sm md:text-xs bg-white theme-dark:bg-slate-700 px-2 py-1 rounded-lg border border-main shadow-sm">x{item.quantity}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <div className="p-5 bg-slate-50 theme-dark:bg-slate-800/50 border-t border-main grid grid-cols-2 gap-3">
               <button onClick={() => setShowKOTModal(false)} className="py-4 rounded-2xl bg-white border border-main text-muted font-black uppercase text-xs md:text-[10px] tracking-widest hover:text-rose-500 transition-all active:scale-95 shadow-sm">Go Back</button>
@@ -219,8 +402,9 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
       {/* Menu Side */}
       <div className={`flex-1 flex flex-col overflow-hidden p-2 md:p-3 border-r border-main ${mobileView === 'cart' ? 'hidden md:flex' : 'flex'}`}>
-        <div className="mb-2 px-1 mt-1 md:mt-2">
+        <div className="mb-2 px-1 mt-1 md:mt-2 flex justify-between items-center">
           <h1 className="text-2xl md:text-3xl font-black text-main tracking-tight uppercase opacity-90 leading-none">Cloud-HMS</h1>
+          <button onClick={startVoiceControl} className="md:hidden w-12 h-12 bg-indigo-600 rounded-2xl text-white shadow-lg active:scale-90 flex items-center justify-center border-2 border-indigo-500/50"><i className="fa-solid fa-microphone text-xl"></i></button>
         </div>
 
         <div className="flex items-center gap-3 mb-3 md:mb-4">
@@ -232,15 +416,26 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </button>
           <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1 items-center pb-0.5 h-16 md:h-auto">
             <button onClick={() => setSelectedGroupId('all')} className={`px-5 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === 'all' ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>All Items</button>
+            <button onClick={() => setSelectedGroupId('favorites')} className={`px-5 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all flex items-center gap-2 ${selectedGroupId === 'favorites' ? 'bg-amber-500 border-amber-600 text-white shadow-sm' : 'bg-card border-main text-amber-500 hover:bg-amber-50'}`}><i className="fa-solid fa-star"></i> Favorites</button>
             {groups.map(g => (<button key={g.id} onClick={() => setSelectedGroupId(g.id)} className={`px-5 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-[9px] font-black uppercase tracking-widest border whitespace-nowrap transition-all ${selectedGroupId === g.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-card border-main text-muted hover:text-indigo-600'}`}>{g.name}</button>))}
           </div>
         </div>
 
-        <div className="mb-4 md:mb-6">
-          <div className="relative group">
+        <div className="mb-4 md:mb-6 flex gap-2">
+          <div className="relative group flex-1">
             <i className="fa-solid fa-magnifying-glass absolute left-4 md:left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-indigo-600 transition-colors text-sm md:text-base"></i>
             <input type="text" placeholder="Search dishes..." className="w-full pr-10 pl-11 md:pr-12 md:pl-16 py-4.5 md:py-5 rounded-2xl bg-card text-main focus:border-indigo-500 outline-none border border-main text-sm md:text-sm font-black shadow-md transition-all placeholder:text-muted/50 ring-indigo-500/5 focus:ring-4" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
           </div>
+          <button 
+            onClick={startVoiceControl}
+            className="hidden md:flex w-[70px] bg-card border border-main rounded-2xl items-center justify-center text-indigo-600 hover:bg-indigo-50 transition-all shadow-md group active:scale-95"
+            title="AI Voice Recognition"
+          >
+            <div className="relative">
+               <i className="fa-solid fa-microphone text-xl group-hover:scale-110 transition-transform"></i>
+               <div className="absolute -top-1 -right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></div>
+            </div>
+          </button>
         </div>
 
         {/* Dynamic Grid vs List View based on settings.showImages */}
@@ -252,8 +447,9 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                   {item.imageUrl ? (
                     <div className="relative aspect-[4/3] w-full bg-slate-100 theme-dark:bg-slate-800 overflow-hidden">
                       <img src={item.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt={item.name} />
-                      <div className="absolute top-2 left-2">
+                      <div className="absolute top-2 left-2 flex gap-1">
                         <span className={`text-[8px] md:text-[8px] font-black px-2 py-0.5 rounded-md border shadow-sm backdrop-blur-md ${item.foodType === FoodType.VEG ? 'border-emerald-500/50 text-emerald-600 bg-emerald-50 theme-dark:bg-emerald-500/10 theme-dark:text-emerald-400' : 'border-rose-500/50 text-rose-600 bg-rose-50 theme-dark:bg-rose-500/10 theme-dark:text-rose-400'}`}>{item.foodType}</span>
+                        {item.isFavorite && <div className="bg-amber-500 text-white w-5 h-5 rounded-md flex items-center justify-center shadow-md border border-amber-600"><i className="fa-solid fa-star text-[8px]"></i></div>}
                       </div>
                       <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
                          <h3 className="font-bold text-white text-[11px] md:text-[11px] leading-tight uppercase line-clamp-1">{item.name}</h3>
@@ -265,10 +461,11 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                     </div>
                   ) : (
                     <div className="relative aspect-[4/3] w-full flex flex-col items-stretch justify-between p-3.5 md:p-4 text-center bg-[#1e293b] theme-dark:bg-[#1a2135]">
-                      <div className="flex justify-start">
+                      <div className="flex justify-start gap-1">
                         <span className={`text-[9px] md:text-[8px] font-black px-2 py-0.5 rounded-md border shadow-sm ${item.foodType === FoodType.VEG ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-rose-500/30 text-rose-400 bg-rose-500/10'}`}>
                           {item.foodType}
                         </span>
+                        {item.isFavorite && <div className="bg-amber-500 text-white w-5 h-5 rounded-md flex items-center justify-center shadow-md border border-amber-600"><i className="fa-solid fa-star text-[8px]"></i></div>}
                       </div>
                       <div className="flex-1 flex items-center justify-center">
                         <h3 className="font-black text-white text-[15px] md:text-[14px] leading-[1.2] uppercase tracking-wide">
@@ -295,6 +492,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 md:w-2.5 md:h-2.5 rounded-full flex-shrink-0 border ${item.foodType === FoodType.VEG ? 'bg-emerald-500 border-emerald-600' : 'bg-rose-500 border-rose-600'}`}></div>
                     <span className="font-black text-main text-[14px] md:text-[13px] uppercase tracking-tight truncate max-w-[200px]">{item.name}</span>
+                    {item.isFavorite && <i className="fa-solid fa-star text-amber-500 text-[10px]"></i>}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-indigo-600 theme-dark:text-indigo-400 font-black text-[15px] md:text-[12px]">₹{item.price}</span>

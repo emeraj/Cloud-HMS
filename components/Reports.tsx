@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../store';
 import { Order } from '../types';
@@ -171,7 +172,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
             onClick={() => setReportType('CaptainWise')} 
             className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'CaptainWise' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
           >
-            Staff Reports
+            Captains Reports
           </button>
         </div>
 
@@ -183,7 +184,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                   <tr>
                     <th className="p-3">Bill #</th>
                     <th className="p-3">Time</th>
-                    <th className="p-3">Cashier</th>
+                    <th className="p-3">STAFF</th>
                     <th className="p-3">Customer</th>
                     <th className="p-3">Mode</th>
                     <th className="p-3 text-right">Amount</th>
