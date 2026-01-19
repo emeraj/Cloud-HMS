@@ -29,7 +29,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showKOTModal, setShowKOTModal] = useState(false);
 
-  // Voice States
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
@@ -65,7 +64,12 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       });
 
       if (lastCloudOrderRef.current !== cloudSignature) {
-        setCartItems(existingOrder.items);
+        // Ensure printedQty is never undefined when loading from DB
+        const itemsWithDefaults = existingOrder.items.map(it => ({
+          ...it,
+          printedQty: it.printedQty || 0
+        }));
+        setCartItems(itemsWithDefaults);
         setSelectedCaptain(existingOrder.captainId);
         setCustomerName(existingOrder.customerName || '');
         setPaymentMode(existingOrder.paymentMode || 'Cash');
@@ -164,10 +168,22 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     let updatedItems: OrderItem[] = [];
     const existingIndex = cartItems.findIndex(i => i.menuItemId === item.id);
     if (existingIndex > -1) {
-      updatedItems = cartItems.map((i, idx) => idx === existingIndex ? { ...i, quantity: i.quantity + qty } : i);
+      updatedItems = cartItems.map((i, idx) => idx === existingIndex ? { 
+        ...i, 
+        quantity: i.quantity + qty,
+        printedQty: i.printedQty || 0 // Preserve existing printed count
+      } : i);
     } else {
       const taxRate = taxes.find(t => t.id === item.taxId)?.rate || 0;
-      updatedItems = [...cartItems, { id: Math.random().toString(36).substr(2, 9), menuItemId: item.id, name: item.name, price: item.price, quantity: qty, taxRate, printedQty: 0 }];
+      updatedItems = [...cartItems, { 
+        id: Math.random().toString(36).substr(2, 9), 
+        menuItemId: item.id, 
+        name: item.name, 
+        price: item.price, 
+        quantity: qty, 
+        taxRate, 
+        printedQty: 0 
+      }];
     }
     setCartItems(updatedItems);
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
@@ -175,7 +191,10 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const updateQty = (id: string, delta: number) => {
     if (isSettledRef.current) return;
-    const updatedItems = cartItems.map(item => item.id === id ? { ...item, quantity: Math.max(0, item.quantity + delta) } : item).filter(i => i.quantity > 0);
+    const updatedItems = cartItems.map(item => item.id === id ? { 
+      ...item, 
+      quantity: Math.max(0, item.quantity + delta) 
+    } : item).filter(i => i.quantity > 0);
     setCartItems(updatedItems);
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
@@ -189,61 +208,58 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const processKOT = async () => {
     setShowKOTModal(false);
-    if (isSettledRef.current) return;
+    if (isSettledRef.current || !activeTable || !currentTable) return;
     
-    // DELTA CALCULATION: Identify items with unprinted quantities
-    const newItemsOnly = cartItems
-      .map(item => ({
-        ...item,
-        quantity: item.quantity - (item.printedQty || 0)
-      }))
+    // 1. DELTA CALCULATION: Strictly find only unprinted quantities
+    const itemsToPrint: OrderItem[] = cartItems
+      .map(item => {
+        const alreadyPrinted = item.printedQty || 0;
+        const newDeltaQty = item.quantity - alreadyPrinted;
+        return { ...item, quantity: newDeltaQty };
+      })
       .filter(item => item.quantity > 0);
 
-    if (newItemsOnly.length === 0) {
-      alert("All items already sent to kitchen.");
+    if (itemsToPrint.length === 0) {
+      alert("All items are already sent to the kitchen.");
       return;
     }
 
-    // UPDATE STATE: Mark everything in current cart as printed
-    const updatedCartWithPrinted = cartItems.map(item => ({
+    // 2. Prepare full order update: Mark all current items as printed
+    const updatedCart = cartItems.map(item => ({
       ...item,
       printedQty: item.quantity
     }));
 
-    let billNo = existingOrder?.dailyBillNo || getNextBillNo();
-    let currentKOTCount = (existingOrder?.kotCount || 0);
+    const billNo = existingOrder?.dailyBillNo || getNextBillNo();
+    const nextKOTCount = (existingOrder?.kotCount || 0) + 1;
+    const orderId = existingOrder?.id || `ORD-${Date.now()}`;
 
-    const subTotal = updatedCartWithPrinted.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const taxAmount = updatedCartWithPrinted.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
-    const totalAmount = subTotal + taxAmount;
-
-    let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     const fullOrder: Order = { 
       id: orderId, 
       dailyBillNo: billNo, 
-      tableId: activeTable!, 
+      tableId: activeTable, 
       captainId: selectedCaptain, 
-      items: updatedCartWithPrinted, 
+      items: updatedCart, 
       status: 'Pending', 
       timestamp: existingOrder?.timestamp || new Date().toISOString(), 
-      subTotal, taxAmount, totalAmount, 
-      kotCount: currentKOTCount + 1, 
+      ...totals, 
+      kotCount: nextKOTCount, 
       customerName, 
       paymentMode, 
       cashierName: user?.displayName || 'Admin' 
     };
 
-    // PRINT OBJECT: Only contains the new quantities
+    // Update local state and DB
+    setCartItems(updatedCart);
+    await upsert("orders", fullOrder);
+    await upsert("tables", { ...currentTable, status: 'Occupied', currentOrderId: orderId });
+    
+    // 3. TRIGGER PRINT: pass an order object that contains ONLY the new items
     const printOrder: Order = {
       ...fullOrder,
-      items: newItemsOnly
+      items: itemsToPrint
     };
 
-    await upsert("orders", fullOrder);
-    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
-    setCartItems(updatedCartWithPrinted);
-    
-    // Fire print for ONLY the new items
     onPrint('KOT', printOrder);
   };
 
@@ -376,10 +392,14 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
               {cartItems.map((item, idx) => {
                 const isNew = item.quantity > (item.printedQty || 0);
                 return (
-                  <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border border-main ${isNew ? 'bg-indigo-50 border-indigo-200' : 'bg-app/40 opacity-60'}`}>
+                  <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border border-main ${isNew ? 'bg-indigo-50 border-indigo-200 shadow-sm' : 'bg-app/40 opacity-50 grayscale'}`}>
                     <div className="flex flex-col">
                       <span className="text-sm md:text-[11px] font-black text-main uppercase truncate pr-4">{item.name}</span>
-                      {isNew && <span className="text-[8px] font-black text-indigo-600 uppercase">New Item</span>}
+                      {isNew ? (
+                         <span className="text-[8px] font-black text-indigo-600 uppercase tracking-tighter">New: {item.quantity - (item.printedQty || 0)} Unit(s)</span>
+                      ) : (
+                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Previously Sent</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                        <span className="text-indigo-600 font-black text-sm md:text-xs bg-white theme-dark:bg-slate-700 px-2 py-1 rounded-lg border border-main shadow-sm">x{item.quantity}</span>
@@ -448,33 +468,33 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      <div className={`w-full md:w-[320px] bg-sidebar flex flex-col border-l border-main overflow-hidden ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-[320px] bg-sidebar flex flex-col border-l border-main overflow-hidden shadow-sm ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
         <div className="p-3 border-b border-main bg-card-alt space-y-2.5">
           <div className="flex justify-between items-center">
             <h2 className="text-[10px] font-black text-main uppercase tracking-widest">Live Cart</h2>
             <div className="bg-indigo-50 px-3 py-1 rounded-lg text-[11px] font-black uppercase">Table {currentTable?.number}</div>
           </div>
           <div className="grid grid-cols-1 gap-2">
-            <select className="w-full p-2 bg-card rounded-xl text-[10px] font-bold text-main border border-main" value={selectedCaptain} onChange={(e) => { setSelectedCaptain(e.target.value); syncCartToCloud(cartItems, e.target.value, customerName, paymentMode); }}>
+            <select className="w-full p-2 bg-card rounded-xl text-[10px] font-bold text-main border border-main outline-none appearance-none" value={selectedCaptain} onChange={(e) => { setSelectedCaptain(e.target.value); syncCartToCloud(cartItems, e.target.value, customerName, paymentMode); }}>
               <option value="">Captain</option>
               {captains.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 space-y-2.5 bg-app/20">
+        <div className="flex-1 overflow-y-auto p-2 space-y-2.5 bg-app/20 custom-scrollbar">
           {isSettledRef.current ? (
             <div className="h-full flex flex-col items-center justify-center opacity-60 text-center p-4">
               <i className="fa-solid fa-check-double text-5xl mb-4 text-emerald-500"></i>
-              <p className="text-sm font-black uppercase tracking-widest text-emerald-600">Settled</p>
+              <p className="text-sm font-black uppercase tracking-widest text-emerald-600">Order Settled</p>
             </div>
           ) : cartItems.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-20"><i className="fa-solid fa-cart-shopping text-3xl mb-3"></i><p className="text-[11px] font-black uppercase">Empty</p></div>
+            <div className="h-full flex flex-col items-center justify-center opacity-20"><i className="fa-solid fa-cart-shopping text-3xl mb-3"></i><p className="text-[11px] font-black uppercase">Empty Cart</p></div>
           ) : (
             cartItems.map(item => (
               <div key={item.id} className="bg-card p-3 rounded-2xl border border-main shadow-sm">
                 <div className="flex justify-between items-start text-[13px] font-bold text-main uppercase mb-2">
-                  <span className="flex-1 pr-2">{item.name}</span>
+                  <span className="flex-1 pr-2 leading-tight">{item.name}</span>
                   <span className="text-indigo-600 font-black">₹{(item.price * item.quantity).toFixed(1)}</span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -499,8 +519,8 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <button onClick={() => setShowKOTModal(true)} disabled={cartItems.length === 0 || isSettledRef.current} className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-fire"></i> SEND KOT</button>
-            <button onClick={handleBillAndSettle} disabled={cartItems.length === 0 || isMobile || isSettledRef.current} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"><i className="fa-solid fa-receipt"></i> {isMobile ? 'PC Billing Only' : 'PRINT BILL'}</button>
+            <button onClick={() => setShowKOTModal(true)} disabled={cartItems.length === 0 || isSettledRef.current} className="w-full py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500"><i className="fa-solid fa-fire"></i> SEND KOT</button>
+            <button onClick={handleBillAndSettle} disabled={cartItems.length === 0 || isMobile || isSettledRef.current} className="w-full py-4 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500"><i className="fa-solid fa-receipt"></i> {isMobile ? 'PC Billing Only' : 'PRINT BILL'}</button>
           </div>
         </div>
       </div>
