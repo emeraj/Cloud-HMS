@@ -110,7 +110,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     <div id="print-section" className="text-black bg-white font-mono text-[12px] uppercase leading-tight print-view selection:bg-transparent">
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
-          {/* Restaurant Details Header */}
           <div className="text-center mb-1">
             <h1 className="text-[18px] font-black tracking-tight mb-1">{settings.name}</h1>
             <p className="text-[10px] whitespace-pre-line leading-normal px-2">{settings.address}</p>
@@ -119,7 +118,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          {/* Simple Clean Header: Updated to 'E S T I M A T E' and normal font size */}
           <div className="border-t border-black border-dashed mt-2 mb-1"></div>
           <div className="text-center py-1">
             <span className="text-[14px] font-black inline-block">
@@ -128,7 +126,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
           <div className="border-b border-black border-dashed mb-2 pb-1"></div>
 
-          {/* Bill Info */}
           <div className="space-y-1 mb-2 px-0.5 text-[11px]">
             <div className="flex justify-between">
               <span className="font-bold">{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST-' : 'INV-'}{order.dailyBillNo || order.id.slice(-5)}</span>
@@ -150,7 +147,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Items Table */}
           <table className="w-full text-left mb-2">
             <thead>
               <tr className="border-b border-black border-dashed">
@@ -174,7 +170,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Totals Section */}
           <div className="space-y-1 mb-1 px-1 text-[11px]">
             <div className="flex justify-between">
               <span>SUBTOTAL:</span>
@@ -193,7 +188,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <span className="text-[22px] font-black">₹{order.totalAmount.toFixed(2)}</span>
           </div>
 
-          {/* Optional GST Summary */}
           {!isEstimate && settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
             <div className="mb-3">
               <div className="text-center font-black text-[10px] mb-1">GST TAX SUMMARY</div>
@@ -220,7 +214,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {/* UPI QR Code */}
           {settings.printQrCode && qrCodeImg && (
             <div className="text-center mb-4 mt-2">
               <p className="text-[10px] font-black mb-1.5 tracking-widest uppercase">SCAN TO PAY (UPI)</p>
@@ -235,7 +228,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {/* Footer Info */}
           <div className="text-center space-y-1 mt-3">
             <p className="font-black text-[12px]">{settings.thankYouMessage}</p>
           </div>
@@ -246,11 +238,11 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="h-12"></div>
         </div>
       ) : (
-        /* KOT Template */
+        /* KOT Template: Fixed numbering and item delta display */
         <div className="text-center flex flex-col items-stretch">
           <div className="border-b border-black border-dashed pb-1.5 mb-1.5">
             <h1 className="text-[14px] font-black tracking-widest">KITCHEN ORDER TICKET</h1>
-            <h2 className="text-[22px] font-black mt-1">KOT #{order.kotCount + 1}</h2>
+            <h2 className="text-[22px] font-black mt-1">KOT #{order.kotCount}</h2>
           </div>
           <div className="flex justify-between font-black text-[12px] mb-1.5 px-1">
             <span>TABLE: {table?.number || 'N/A'}</span>
