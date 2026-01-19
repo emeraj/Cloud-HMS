@@ -64,7 +64,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       });
 
       if (lastCloudOrderRef.current !== cloudSignature) {
-        // Ensure printedQty is never undefined when loading from DB
         const itemsWithDefaults = existingOrder.items.map(it => ({
           ...it,
           printedQty: it.printedQty || 0
@@ -171,7 +170,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       updatedItems = cartItems.map((i, idx) => idx === existingIndex ? { 
         ...i, 
         quantity: i.quantity + qty,
-        printedQty: i.printedQty || 0 // Preserve existing printed count
+        printedQty: i.printedQty || 0 
       } : i);
     } else {
       const taxRate = taxes.find(t => t.id === item.taxId)?.rate || 0;
@@ -199,18 +198,10 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
   };
 
-  const updatePrice = (id: string, newPrice: number) => {
-    if (isSettledRef.current) return;
-    const updatedItems = cartItems.map(item => item.id === id ? { ...item, price: newPrice } : item);
-    setCartItems(updatedItems);
-    syncCartToCloud(updatedItems, selectedCaptain, customerName, paymentMode);
-  };
-
   const processKOT = async () => {
     setShowKOTModal(false);
     if (isSettledRef.current || !activeTable || !currentTable) return;
     
-    // 1. DELTA CALCULATION: Strictly find only unprinted quantities
     const itemsToPrint: OrderItem[] = cartItems
       .map(item => {
         const alreadyPrinted = item.printedQty || 0;
@@ -224,7 +215,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       return;
     }
 
-    // 2. Prepare full order update: Mark all current items as printed
     const updatedCart = cartItems.map(item => ({
       ...item,
       printedQty: item.quantity
@@ -249,18 +239,23 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       cashierName: user?.displayName || 'Admin' 
     };
 
-    // Update local state and DB
+    // 1. Save main order state
     setCartItems(updatedCart);
     await upsert("orders", fullOrder);
     await upsert("tables", { ...currentTable, status: 'Occupied', currentOrderId: orderId });
     
-    // 3. TRIGGER PRINT: pass an order object that contains ONLY the new items
-    const printOrder: Order = {
+    // 2. Create a permanent KOT record for history/reporting
+    const kotRecord: Order = {
       ...fullOrder,
-      items: itemsToPrint
+      id: `KOT-${Date.now()}`,
+      items: itemsToPrint, // Only the newly added items go into the record
+      kotCount: nextKOTCount,
+      timestamp: new Date().toISOString()
     };
-
-    onPrint('KOT', printOrder);
+    await upsert("kots", kotRecord);
+    
+    // 3. Fire local print
+    onPrint('KOT', kotRecord);
   };
 
   const handleBillAndSettle = async () => {

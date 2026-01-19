@@ -9,28 +9,35 @@ interface ReportsProps {
 }
 
 const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
-  const { orders, captains, setActiveTable, tables, upsert, remove } = useApp();
-  const [reportType, setReportType] = useState<'DayBook' | 'CaptainWise' | 'ItemSummary'>('DayBook');
+  const { orders, kots, captains, setActiveTable, tables, upsert, remove } = useApp();
+  const [reportType, setReportType] = useState<'DayBook' | 'TableKOT' | 'ItemSummary' | 'CaptainWise'>('DayBook');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isClosing, setIsClosing] = useState(false);
 
-  // Filtered orders specifically for the DayBook (Accounting view)
-  const finalizedOrders = useMemo(() => {
+  // Filtered orders specifically for the selected date
+  const filteredOrdersByDate = useMemo(() => {
     return orders.filter(o => {
       const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
-      // EXCLUDE DRAFTS: Only show orders that have been assigned a Bill Number
-      return orderDate === selectedDate && o.dailyBillNo && o.dailyBillNo !== '';
-    }).sort((a, b) => {
-      // Numerical sort by Bill Number (Descending)
-      const numA = parseInt(a.dailyBillNo);
-      const numB = parseInt(b.dailyBillNo);
-      return numB - numA;
+      return orderDate === selectedDate;
     });
   }, [orders, selectedDate]);
 
+  // Finalized orders for DayBook
+  const finalizedOrders = useMemo(() => {
+    return filteredOrdersByDate.filter(o => o.dailyBillNo && o.dailyBillNo !== '')
+      .sort((a, b) => parseInt(b.dailyBillNo) - parseInt(a.dailyBillNo));
+  }, [filteredOrdersByDate]);
+
+  // Historical KOTs from the 'kots' collection
+  const kotReportRecords = useMemo(() => {
+    return kots.filter(k => {
+      const kotDate = new Date(k.timestamp).toISOString().split('T')[0];
+      return kotDate === selectedDate;
+    }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [kots, selectedDate]);
+
   const settledOrders = useMemo(() => finalizedOrders.filter(o => o.status === 'Settled' || o.status === 'Billed'), [finalizedOrders]);
   
-  // Real-time stats recalculation based on finalized/billed orders
   const stats = useMemo(() => {
     const total = settledOrders.reduce((acc, curr) => acc + curr.totalAmount, 0);
     const count = settledOrders.length;
@@ -66,10 +73,16 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
     }
   };
 
+  const handleDeleteKOT = async (kotId: string) => {
+    if (confirm("Delete this KOT record?")) {
+      await remove("kots", kotId);
+    }
+  };
+
   const handleEditOrder = async (order: Order) => {
     const table = tables.find(t => t.id === order.tableId);
-    if (table && table.status !== 'Available') {
-      alert("Table is currently occupied.");
+    if (table && table.status !== 'Available' && table.currentOrderId !== order.id) {
+      alert("Table is currently occupied by another order.");
       return;
     }
     if (confirm("Re-open this order? It will return to 'Billing' status.")) {
@@ -85,13 +98,13 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
       return;
     }
 
-    if (confirm("Do You Realy want to close day!")) {
+    if (confirm("Do You Realy want to close day! This will clear all finalized orders.")) {
       setIsClosing(true);
       try {
         for (const order of finalizedOrders) {
           await remove("orders", order.id);
         }
-        alert("Day closed successfully. All finalized bills cleared for " + selectedDate);
+        alert("Day closed successfully.");
       } catch (err) {
         console.error(err);
         alert("An error occurred while closing the day.");
@@ -105,15 +118,15 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
     <div className="space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-end mb-2">
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm">
+          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm transition-all">
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Finalized Sales</p>
             <p className="text-lg font-black text-emerald-600">₹{stats.total.toFixed(2)}</p>
           </div>
-          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm">
+          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm transition-all">
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Bills Count</p>
             <p className="text-lg font-black text-slate-800 theme-dark:text-slate-200">{stats.count}</p>
           </div>
-          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm">
+          <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl border border-main shadow-sm transition-all">
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Top Dish Sales</p>
             <p className="text-lg font-black text-indigo-600 theme-dark:text-indigo-400">₹{stats.topRevenue.toFixed(2)}</p>
           </div>
@@ -122,30 +135,27 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="bg-white theme-dark:bg-slate-800 p-2 rounded-xl border border-main min-w-[180px] shadow-sm">
             <label className="block text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1 pl-1">Report Date</label>
-            <div className="relative">
-              <input 
-                type="date" 
-                className="w-full bg-slate-50 theme-dark:bg-slate-700 text-slate-900 theme-dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg outline-none border border-slate-200 theme-dark:border-slate-600 appearance-none"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
-            </div>
+            <input 
+              type="date" 
+              className="w-full bg-slate-50 theme-dark:bg-slate-700 text-slate-900 theme-dark:text-white text-[11px] font-bold py-1.5 px-3 rounded-lg outline-none border border-slate-200 theme-dark:border-slate-600"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
           </div>
           
           <div className="flex gap-2">
             <button 
               onClick={() => onPrintDayBook?.(settledOrders, selectedDate)}
               disabled={settledOrders.length === 0}
-              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-md flex-1 md:flex-none"
+              className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-md"
             >
-              <i className="fa-solid fa-print"></i>
-              Print
+              <i className="fa-solid fa-print"></i> Print
             </button>
             
             <button 
               onClick={handleDayClose}
               disabled={finalizedOrders.length === 0 || isClosing}
-              className="bg-rose-600 hover:bg-rose-500 disabled:opacity-30 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-md flex-1 md:flex-none"
+              className="bg-rose-600 hover:bg-rose-500 disabled:opacity-30 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest shadow-md"
             >
               {isClosing ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-calendar-check"></i>}
               Day Close
@@ -156,24 +166,17 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
 
       <div className="bg-white theme-dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-main">
         <div className="flex border-b border-main bg-slate-50/50 theme-dark:bg-slate-900/50 overflow-x-auto no-scrollbar">
-          <button 
-            onClick={() => setReportType('DayBook')} 
-            className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'DayBook' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
-          >
-            DayBook (Final Bills)
-          </button>
-          <button 
-            onClick={() => setReportType('ItemSummary')} 
-            className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'ItemSummary' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
-          >
-            Item Wise Sales
-          </button>
-          <button 
-            onClick={() => setReportType('CaptainWise')} 
-            className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === 'CaptainWise' ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
-          >
-            Captains Reports
-          </button>
+          {(['DayBook', 'TableKOT', 'ItemSummary', 'CaptainWise'] as const).map(type => (
+            <button 
+              key={type}
+              onClick={() => setReportType(type)} 
+              className={`px-5 py-3 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 whitespace-nowrap ${reportType === type ? 'border-indigo-600 bg-indigo-50 theme-dark:bg-indigo-900/20 text-indigo-600 theme-dark:text-indigo-400' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+            >
+              {type === 'DayBook' ? 'DayBook (Final Bills)' : 
+               type === 'TableKOT' ? 'Table KOT Report' : 
+               type === 'ItemSummary' ? 'Item Wise Sales' : 'Captains Reports'}
+            </button>
+          ))}
         </div>
 
         <div className="p-3">
@@ -232,6 +235,71 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                         </td>
                       </tr>
                     ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {reportType === 'TableKOT' && (
+            <div className="overflow-x-auto rounded-lg border border-slate-200 theme-dark:border-slate-700">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 theme-dark:bg-slate-900 text-[9px] font-black text-slate-500 uppercase">
+                  <tr>
+                    <th className="p-3">KOT #</th>
+                    <th className="p-3">Table</th>
+                    <th className="p-3">Date</th>
+                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-right">Time</th>
+                    <th className="p-3 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white theme-dark:bg-slate-800 text-[11px]">
+                  {kotReportRecords.length === 0 ? (
+                    <tr><td colSpan={6} className="p-10 text-center text-slate-400 font-bold uppercase italic tracking-wider">No KOTs generated for {selectedDate}</td></tr>
+                  ) : (
+                    kotReportRecords.map((kotRecord) => {
+                      const table = tables.find(t => t.id === kotRecord.tableId);
+                      const totalQty = kotRecord.items.reduce((sum, item) => sum + item.quantity, 0);
+                      return (
+                        <tr key={kotRecord.id} className="border-b border-slate-100 theme-dark:border-slate-700 last:border-0 hover:bg-slate-50 theme-dark:hover:bg-slate-700/50 transition-colors">
+                          <td className="p-3">
+                            <div className="font-mono font-black text-orange-600">KOT #{kotRecord.kotCount}</div>
+                            <div className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">SAVED</div>
+                          </td>
+                          <td className="p-3">
+                            <span className="bg-slate-100 theme-dark:bg-slate-700 px-2 py-1 rounded font-black text-slate-700 theme-dark:text-slate-200">
+                              {table?.number || 'N/A'}
+                            </span>
+                          </td>
+                          <td className="p-3 text-slate-500 font-medium">
+                            {new Date(kotRecord.timestamp).toLocaleDateString('en-IN')}
+                          </td>
+                          <td className="p-3 text-center text-indigo-600 font-black">{totalQty}</td>
+                          <td className="p-3 text-right text-slate-700 theme-dark:text-slate-300 font-bold">
+                            {new Date(kotRecord.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex justify-center gap-1">
+                               <button 
+                                 onClick={() => onPrint?.('KOT', kotRecord)} 
+                                 className="w-10 h-10 rounded-xl bg-orange-50 theme-dark:bg-orange-950/20 text-orange-600 hover:bg-orange-600 hover:text-white transition-all flex items-center justify-center border border-orange-200 theme-dark:border-orange-800 shadow-sm active:scale-95"
+                                 title="Re-print KOT"
+                               >
+                                 <i className="fa-solid fa-print"></i>
+                               </button>
+                               <button 
+                                 onClick={() => handleDeleteKOT(kotRecord.id)} 
+                                 className="w-10 h-10 rounded-xl bg-white theme-dark:bg-slate-700 text-slate-300 hover:text-rose-500 transition-all flex items-center justify-center border border-slate-200 theme-dark:border-slate-600"
+                                 title="Delete KOT"
+                               >
+                                 <i className="fa-solid fa-trash-can text-xs"></i>
+                               </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
