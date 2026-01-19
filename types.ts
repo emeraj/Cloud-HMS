@@ -49,6 +49,17 @@ export interface Table {
   currentOrderId?: string;
 }
 
+export interface KOTRecord {
+  id: string;
+  kotNo: number;
+  orderId: string;
+  tableId: string;
+  tableNumber: string;
+  captainName: string;
+  items: OrderItem[];
+  timestamp: string;
+}
+
 export interface Order {
   id: string;
   dailyBillNo: string; // e.g., 00001

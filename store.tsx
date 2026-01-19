@@ -15,7 +15,7 @@ import {
   User, 
   signOut 
 } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings } from './types';
+import { Table, MenuItem, Group, Tax, Captain, Order, BusinessSettings, KOTRecord } from './types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC6FGS4MYHqYBGa_LGq9yfNrbzp-gKrhn8",
@@ -52,6 +52,7 @@ interface AppState {
   taxes: Tax[];
   captains: Captain[];
   orders: Order[];
+  kots: KOTRecord[];
   settings: BusinessSettings;
   setSettings: React.Dispatch<React.SetStateAction<BusinessSettings>>;
   activeTable: string | null;
@@ -74,6 +75,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [taxes, setTaxes] = useState<Tax[]>([]);
   const [captains, setCaptains] = useState<Captain[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [kots, setKots] = useState<KOTRecord[]>([]);
   const [settings, setSettings] = useState<BusinessSettings>({
     name: 'Cloud-HMS Garden Restaurant',
     address: '123 Food Street, Pune',
@@ -113,6 +115,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     unsubscribes.push(createListener("taxes", setTaxes));
     unsubscribes.push(createListener("waiters", setCaptains)); 
     unsubscribes.push(createListener("orders", setOrders));
+    unsubscribes.push(createListener("kots", setKots));
     unsubscribes.push(onSnapshot(doc(db, "config", "business_settings"), snap => {
       if (snap.exists()) setSettings(prev => ({ ...prev, ...snap.data() } as BusinessSettings));
       setIsLoading(false);
@@ -145,7 +148,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{
-      user, logout, tables, menu, groups, taxes, captains, orders, settings, setSettings,
+      user, logout, tables, menu, groups, taxes, captains, orders, kots, settings, setSettings,
       activeTable, setActiveTable, isLoading, isSyncing, upsert, remove
     }}>
       {children}

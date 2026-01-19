@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../store';
-import { MenuItem, OrderItem, Order, FoodType } from '../types';
+import { MenuItem, OrderItem, Order, FoodType, KOTRecord } from '../types';
 
 interface PosViewProps {
   onBack: () => void;
@@ -11,7 +11,7 @@ interface PosViewProps {
 const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const { 
     activeTable, tables, menu, groups, captains, 
-    orders, taxes, upsert, remove, user, settings 
+    orders, kots, taxes, upsert, remove, user, settings 
   } = useApp();
   
   const currentTable = tables.find(t => t.id === activeTable);
@@ -38,7 +38,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const lastCloudOrderRef = useRef<string | null>(null);
 
-  // Helper to find captain ID matching the logged in user's name
   const getMatchingCaptainId = useCallback(() => {
     if (!user?.displayName || captains.length === 0) return '';
     const match = captains.find(c => 
@@ -168,7 +167,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         price: item.price, 
         quantity: qty, 
         taxRate,
-        printedQty: 0 // Initialize printedQty for new items
+        printedQty: 0
       }];
     }
     setCartItems(updatedItems);
@@ -193,7 +192,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
     setShowKOTModal(false);
     if (isSettledRef.current) return;
     
-    // 1. Identify "New" items (quantities added since last KOT)
     const itemsToPrint = cartItems.map(item => {
       const previouslyPrinted = item.printedQty || 0;
       const diff = item.quantity - previouslyPrinted;
@@ -205,46 +203,53 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       return;
     }
 
-    // 2. Calculate INCREMENTAL GLOBAL KOT NUMBER for today
+    // Incremental numbering logic based on ALL KOTs issued today
     const todayStr = new Date().toISOString().split('T')[0];
-    const todayOrders = orders.filter(o => {
-      const orderDate = new Date(o.timestamp).toISOString().split('T')[0];
-      return orderDate === todayStr;
-    });
+    const todayKots = kots.filter(k => k.timestamp.split('T')[0] === todayStr);
+    const maxKotNo = todayKots.reduce((max, k) => Math.max(max, k.kotNo), 0);
+    const newKotNo = maxKotNo + 1;
     
-    // Find the highest KOT number across ALL tables today
-    const maxGlobalKot = todayOrders.reduce((max, o) => Math.max(max, o.kotCount || 0), 0);
-    const newKotCount = maxGlobalKot + 1;
-    
-    // Mark all current quantities as "printed"
+    const orderId = existingOrder?.id || `ORD-${Date.now()}`;
+    const captainName = captains.find(c => c.id === selectedCaptain)?.name || 'Guest';
+
+    // 1. Create a detailed KOT record
+    const kotRecord: KOTRecord = {
+      id: `kot-${Date.now()}`,
+      kotNo: newKotNo,
+      orderId,
+      tableId: activeTable!,
+      tableNumber: currentTable?.number || 'N/A',
+      captainName,
+      items: itemsToPrint,
+      timestamp: new Date().toISOString()
+    };
+    await upsert("kots", kotRecord);
+
+    // 2. Update order state
     const updatedCartItems = cartItems.map(item => ({
       ...item,
       printedQty: item.quantity
     }));
 
     const finalOrderData: Order = {
-      id: existingOrder?.id || `ORD-${Date.now()}`,
-      dailyBillNo: existingOrder?.dailyBillNo || '', // Don't assign bill no yet if not billing
+      id: orderId,
+      dailyBillNo: existingOrder?.dailyBillNo || '',
       tableId: activeTable!,
       captainId: selectedCaptain,
       items: updatedCartItems,
       status: 'Pending',
       timestamp: existingOrder?.timestamp || new Date().toISOString(),
       ...totals,
-      kotCount: newKotCount, // Stores the LATEST global KOT number for this order
+      kotCount: newKotNo,
       customerName,
       paymentMode,
       cashierName: user?.displayName || 'Admin'
     };
 
-    // 3. Save to Cloud
     await upsert("orders", finalOrderData);
-    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: finalOrderData.id });
+    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
     
-    // Update local state to reflect the printed quantities
     setCartItems(updatedCartItems);
-
-    // 4. Print ONLY the itemsToPrint with the NEW GLOBAL KOT NO
     onPrint('KOT', { ...finalOrderData, items: itemsToPrint });
   };
 
@@ -324,7 +329,6 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
           </div>
         </div>
 
-        {/* Dynamic Grid vs List View based on settings.showImages */}
         <div className={`${settings.showImages ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4' : 'flex flex-col gap-2'} overflow-y-auto pr-1 pb-24 md:pb-20 custom-scrollbar`}>
           {filteredMenu.map(item => {
             if (settings.showImages) {
