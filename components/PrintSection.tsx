@@ -70,16 +70,25 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
   const table = tables.find(t => t.id === order.tableId);
   const captain = captains.find(w => w.id === order.captainId);
-  const formattedDate = new Date(order.timestamp).toLocaleDateString('en-IN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  const formattedTime = new Date(order.timestamp).toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: true
-  });
+  
+  // Resilient date/time formatting
+  let formattedDate = 'N/A';
+  let formattedTime = 'N/A';
+  try {
+    const d = new Date(order.timestamp);
+    if (!isNaN(d.getTime())) {
+      formattedDate = d.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      formattedTime = d.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+  } catch(e) {}
 
   const isEstimate = settings.invoiceFormat === 2;
 
@@ -91,7 +100,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiUrl)}`
     : '';
 
-  const gstBreakdown = order.items.reduce((acc: any, item) => {
+  const gstBreakdown = (order.items || []).reduce((acc: any, item) => {
     const rate = item.taxRate;
     const taxable = (item.price * item.quantity);
     const taxVal = (taxable * rate) / 100;
@@ -108,6 +117,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
   // Safe KOT display number
   const safeKotNo = isNaN(Number(order.kotCount)) ? '??' : order.kotCount;
+  const safeCaptainName = captain?.name || (order as any).captainName || 'N/A';
 
   return (
     <div id="print-section" className="text-black bg-white font-mono text-[12px] uppercase leading-tight print-view selection:bg-transparent">
@@ -143,7 +153,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
             <div className="flex justify-between">
               <span className="font-black">TABLE: {table?.number || 'N/A'}</span>
-              <span>CAPT: {captain?.name || 'N/A'}</span>
+              <span>CAPT: {safeCaptainName}</span>
             </div>
             <div className="flex justify-between">
               <span>CASHIER: {order.cashierName || 'ADMIN'}</span>
@@ -164,7 +174,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
               </tr>
             </thead>
             <tbody>
-              {order.items.map((item, idx) => (
+              {(order.items || []).map((item, idx) => (
                 <tr key={idx} className="border-b border-black border-dotted last:border-0">
                   <td className="py-1.5 align-top pr-1 leading-[1.2] text-[11px] font-bold">{idx + 1}. {item.name}</td>
                   <td className="py-1.5 text-center align-top font-bold">{item.quantity}</td>
@@ -262,7 +272,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           
           <div className="flex justify-between font-bold text-[10px] mb-2 px-1">
             <span>TIME: {formattedTime}</span>
-            <span>CAPT: {captain?.name || 'N/A'}</span>
+            <span>CAPT: {safeCaptainName}</span>
           </div>
 
           <table className="w-full text-left">
@@ -273,7 +283,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
                 </tr>
              </thead>
              <tbody>
-               {order.items.map((item, idx) => (
+               {(order.items || []).map((item, idx) => (
                  <tr key={idx} className="border-b border-black border-dotted">
                     <td className="py-3 font-black text-[15px] leading-tight pr-2 uppercase">{item.name}</td>
                     <td className="py-3 text-center font-black text-[28px] border-l border-black border-dotted">{item.quantity}</td>
@@ -283,7 +293,7 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </table>
           
           <div className="mt-4 border-t border-black border-dashed pt-2">
-            <p className="text-[11px] font-black italic">--- NEW ITEMS ONLY ---</p>
+            <p className="text-[11px] font-black italic">--- KOT RE-PRINT ---</p>
           </div>
           
           <div className="text-center py-8">

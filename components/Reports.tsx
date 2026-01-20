@@ -23,7 +23,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   }, [orders, selectedDate]);
 
   const dailyKots = useMemo(() => {
-    return kots.filter(k => k.timestamp.split('T')[0] === selectedDate)
+    return kots.filter(k => k.timestamp && k.timestamp.split('T')[0] === selectedDate)
       .sort((a, b) => b.kotNo - a.kotNo);
   }, [kots, selectedDate]);
 
@@ -77,15 +77,27 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   };
 
   const handleReprintKOT = (kot: KOTRecord) => {
-    // Create a mock order structure for the print engine to consume
-    const mockOrder: any = {
-      kotCount: kot.kotNo,
+    // Create a complete order structure for the print engine to consume
+    const mockOrder: Order = {
+      id: kot.orderId,
+      dailyBillNo: '',
       tableId: kot.tableId,
-      timestamp: kot.timestamp,
-      captainId: kot.id, // ID is used for lookup usually, but print uses captain record if found
+      captainId: '', // Print engine will use captainName if lookup fails
       items: kot.items,
-      id: kot.orderId
+      status: 'Pending',
+      timestamp: kot.timestamp,
+      subTotal: 0,
+      taxAmount: 0,
+      totalAmount: 0,
+      kotCount: kot.kotNo,
+      customerName: '',
+      paymentMode: 'Cash',
+      cashierName: ''
     };
+    
+    // Attach captain name as a custom property for the printer
+    (mockOrder as any).captainName = kot.captainName;
+    
     onPrint?.('KOT', mockOrder);
   };
 
@@ -178,7 +190,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
                           <td className="p-3 text-center font-black">{kot.items.reduce((s, i) => s + i.quantity, 0)}</td>
                           <td className="p-3 flex justify-center gap-2">
                             <button className="text-indigo-600 font-black text-[10px] uppercase">{expandedKotId === kot.id ? 'Hide Details' : 'View Details'}</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleReprintKOT(kot); }} className="px-3 py-1.5 rounded-lg bg-orange-600 text-white font-black text-[9px] uppercase tracking-widest"><i className="fa-solid fa-print mr-2"></i>Re-print</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleReprintKOT(kot); }} className="px-3 py-1.5 rounded-lg bg-orange-600 text-white font-black text-[9px] uppercase tracking-widest transition-all active:scale-95 shadow-md hover:bg-orange-500"><i className="fa-solid fa-print mr-2"></i>Re-print</button>
                           </td>
                         </tr>
                         {expandedKotId === kot.id && (
