@@ -27,6 +27,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [showKOTModal, setShowKOTModal] = useState(false);
+  const [isProcessingKOT, setIsProcessingKOT] = useState(false);
 
   const isSettledRef = useRef(false);
 
@@ -58,7 +59,12 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       });
 
       if (lastCloudOrderRef.current !== cloudSignature) {
-        setCartItems(existingOrder.items);
+        // Ensure printedQty is always at least 0 when syncing from cloud
+        const syncedItems = (existingOrder.items || []).map(item => ({
+          ...item,
+          printedQty: Number(item.printedQty || 0)
+        }));
+        setCartItems(syncedItems);
         setSelectedCaptain(existingOrder.captainId);
         setCustomerName(existingOrder.customerName || '');
         setPaymentMode(existingOrder.paymentMode || 'Cash');
@@ -95,7 +101,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const totals = useMemo(() => {
     const subTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const taxAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
+    const taxAmount = cartItems.reduce((acc, item) => acc + (item.price * item.quantity * (item.taxRate || 0) / 100), 0);
     return { subTotal, taxAmount, totalAmount: subTotal + taxAmount };
   }, [cartItems]);
 
@@ -130,7 +136,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
       return;
     }
     const subTotal = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * item.taxRate / 100), 0);
+    const taxAmount = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity * (item.taxRate || 0) / 100), 0);
     const totalAmount = subTotal + taxAmount;
     let orderId = existingOrder?.id || `ORD-${Date.now()}`;
     const newOrder: Order = {
@@ -189,73 +195,84 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
   };
 
   const processKOT = async () => {
+    if (isProcessingKOT || isSettledRef.current) return;
+    setIsProcessingKOT(true);
     setShowKOTModal(false);
-    if (isSettledRef.current) return;
     
-    const itemsToPrint = cartItems.map(item => {
-      const previouslyPrinted = item.printedQty || 0;
+    // Safety copy of cart items to process
+    const currentItemsSnapshot = [...cartItems];
+    
+    const itemsToPrint = currentItemsSnapshot.map(item => {
+      const previouslyPrinted = Number(item.printedQty || 0);
       const diff = item.quantity - previouslyPrinted;
+      // Return a clean copy with the delta quantity for the kitchen ticket
       return diff > 0 ? { ...item, quantity: diff } : null;
     }).filter(Boolean) as OrderItem[];
 
     if (itemsToPrint.length === 0) {
       alert("No new items to send to Kitchen.");
+      setIsProcessingKOT(false);
       return;
     }
 
-    // Harden the incremental numbering logic to avoid NaN
-    const todayStr = new Date().toISOString().split('T')[0];
-    const todayKots = kots.filter(k => k.timestamp && k.timestamp.split('T')[0] === todayStr);
-    
-    // Safely find maximum KOT number today across all tables
-    const maxKotNo = todayKots.reduce((max, k) => {
-      const val = Number(k.kotNo);
-      return isNaN(val) ? max : Math.max(max, val);
-    }, 0);
-    const newKotNo = maxKotNo + 1;
-    
-    const orderId = existingOrder?.id || `ORD-${Date.now()}`;
-    const captainName = captains.find(c => c.id === selectedCaptain)?.name || 'Guest';
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayKots = kots.filter(k => k.timestamp && k.timestamp.split('T')[0] === todayStr);
+      const maxKotNo = todayKots.reduce((max, k) => {
+        const val = Number(k.kotNo);
+        return isNaN(val) ? max : Math.max(max, val);
+      }, 0);
+      const newKotNo = maxKotNo + 1;
+      
+      const orderId = existingOrder?.id || `ORD-${Date.now()}`;
+      const captainName = captains.find(c => c.id === selectedCaptain)?.name || 'Guest';
 
-    // 1. Create a detailed KOT record
-    const kotRecord: KOTRecord = {
-      id: `kot-${Date.now()}`,
-      kotNo: newKotNo,
-      orderId,
-      tableId: activeTable!,
-      tableNumber: currentTable?.number || 'N/A',
-      captainName,
-      items: itemsToPrint,
-      timestamp: new Date().toISOString()
-    };
-    await upsert("kots", kotRecord);
+      // 1. Create a detailed KOT record
+      const kotRecord: KOTRecord = {
+        id: `kot-${Date.now()}`,
+        kotNo: newKotNo,
+        orderId,
+        tableId: activeTable!,
+        tableNumber: currentTable?.number || 'N/A',
+        captainName,
+        items: itemsToPrint,
+        timestamp: new Date().toISOString()
+      };
+      await upsert("kots", kotRecord);
 
-    // 2. Update order state
-    const updatedCartItems = cartItems.map(item => ({
-      ...item,
-      printedQty: item.quantity
-    }));
+      // 2. Update order state locally and in cloud
+      const updatedCartItems = currentItemsSnapshot.map(item => ({
+        ...item,
+        printedQty: item.quantity
+      }));
 
-    const finalOrderData: Order = {
-      id: orderId,
-      dailyBillNo: existingOrder?.dailyBillNo || '',
-      tableId: activeTable!,
-      captainId: selectedCaptain,
-      items: updatedCartItems,
-      status: 'Pending',
-      timestamp: existingOrder?.timestamp || new Date().toISOString(),
-      ...totals,
-      kotCount: newKotNo,
-      customerName,
-      paymentMode,
-      cashierName: user?.displayName || 'Admin'
-    };
+      const finalOrderData: Order = {
+        id: orderId,
+        dailyBillNo: existingOrder?.dailyBillNo || '',
+        tableId: activeTable!,
+        captainId: selectedCaptain,
+        items: updatedCartItems,
+        status: 'Pending',
+        timestamp: existingOrder?.timestamp || new Date().toISOString(),
+        ...totals,
+        kotCount: newKotNo,
+        customerName,
+        paymentMode,
+        cashierName: user?.displayName || 'Admin'
+      };
 
-    await upsert("orders", finalOrderData);
-    await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
-    
-    setCartItems(updatedCartItems);
-    onPrint('KOT', { ...finalOrderData, items: itemsToPrint });
+      await upsert("orders", finalOrderData);
+      await upsert("tables", { ...currentTable!, status: 'Occupied', currentOrderId: orderId });
+      
+      setCartItems(updatedCartItems);
+      // Pass the itemsToPrint which correctly contains only the NEW items
+      onPrint('KOT', { ...finalOrderData, items: itemsToPrint });
+    } catch (err) {
+      console.error("KOT processing failed:", err);
+      alert("Failed to generate KOT. Please try again.");
+    } finally {
+      setIsProcessingKOT(false);
+    }
   };
 
   const handleBillAndSettle = async () => {
@@ -285,7 +302,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
 
   const newItemsForKOTPreview = useMemo(() => {
     return cartItems.map(item => {
-      const diff = item.quantity - (item.printedQty || 0);
+      const diff = item.quantity - Number(item.printedQty || 0);
       return diff > 0 ? { ...item, quantity: diff } : null;
     }).filter(Boolean) as OrderItem[];
   }, [cartItems]);
@@ -314,7 +331,10 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
             <div className="p-5 bg-slate-50 theme-dark:bg-slate-800/50 border-t border-main grid grid-cols-2 gap-3">
               <button onClick={() => setShowKOTModal(false)} className="py-4 rounded-2xl bg-white border border-main text-muted font-black uppercase text-xs md:text-[10px] tracking-widest hover:text-rose-500 transition-all active:scale-95 shadow-sm">Go Back</button>
-              <button onClick={processKOT} disabled={newItemsForKOTPreview.length === 0} className="py-4 rounded-2xl bg-orange-600 text-white font-black uppercase text-xs md:text-[10px] tracking-widest shadow-lg hover:bg-orange-500 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-30"><i className="fa-solid fa-print"></i>Confirm Print</button>
+              <button onClick={processKOT} disabled={newItemsForKOTPreview.length === 0 || isProcessingKOT} className="py-4 rounded-2xl bg-orange-600 text-white font-black uppercase text-xs md:text-[10px] tracking-widest shadow-lg hover:bg-orange-500 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-30">
+                {isProcessingKOT ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-print"></i>}
+                {isProcessingKOT ? 'Processing...' : 'Confirm Print'}
+              </button>
             </div>
           </div>
         </div>
@@ -430,7 +450,7 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
             <div className="relative group">
               <input type="text" placeholder="Cust. Name" className="w-full pl-9 pr-4 py-3 md:py-2 bg-card rounded-xl text-xs md:text-[10px] font-bold text-main border border-main outline-none placeholder:text-muted focus:border-indigo-500" value={customerName} onChange={(e) => { setCustomerName(e.target.value); syncCartToCloud(cartItems, selectedCaptain, e.target.value, paymentMode); }} />
-              <i className="fa-solid fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-xs md:text-[10px]"></i>
+              <i className="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-muted text-xs md:text-[10px]"></i>
             </div>
           </div>
         </div>
@@ -482,7 +502,10 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <button onClick={() => setShowKOTModal(true)} disabled={cartItems.length === 0 || isSettledRef.current} className="w-full py-4.5 md:py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500"><i className="fa-solid fa-fire text-sm"></i> SEND KOT</button>
+            <button onClick={() => setShowKOTModal(true)} disabled={cartItems.length === 0 || isSettledRef.current || isProcessingKOT} className="w-full py-4.5 md:py-4 bg-orange-600 text-white rounded-xl font-black uppercase text-xs md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-orange-500">
+               {isProcessingKOT ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-fire text-sm"></i>}
+               {isProcessingKOT ? 'Processing KOT...' : 'SEND KOT'}
+            </button>
             <div className="flex flex-col gap-2.5 pb-2 md:pb-0">
               <button onClick={handleBillAndSettle} disabled={cartItems.length === 0 || isMobile || isSettledRef.current} className="w-full py-4.5 md:py-4 bg-emerald-600 text-white rounded-xl font-black uppercase text-xs md:text-[11px] tracking-widest shadow-lg disabled:opacity-30 active:scale-[0.98] transition-all flex items-center justify-center gap-2 hover:bg-emerald-500" title={isMobile ? "Billing Restricted on Mobile" : ""}><i className="fa-solid fa-receipt text-sm"></i> {isMobile ? 'PC Billing Only' : 'PRINT BILL & SETTLE'}</button>
             </div>
