@@ -40,7 +40,8 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
         items[item.menuItemId].revenue += item.price * item.quantity;
       });
     });
-    const sortedItems = Object.values(items).sort((a, b) => b.revenue - a.revenue);
+    // Updated sorting: now sorting by quantity descending
+    const sortedItems = Object.values(items).sort((a, b) => b.quantity - a.quantity);
     return { total, count, topRevenue: sortedItems[0]?.revenue || 0, itemSummary: sortedItems };
   }, [settledOrders]);
 
