@@ -48,8 +48,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500 pb-10">
-      {/* Super Compact Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+      {/* Super Compact Stats Section - Hidden on Mobile */}
+      <div className="hidden md:grid grid-cols-1 md:grid-cols-4 gap-2">
         <div className="bg-white theme-dark:bg-slate-800 p-3 rounded-xl shadow-sm border border-main flex items-center justify-between transition-all hover:shadow-md">
           <div className="text-left">
             <p className="text-slate-500 theme-dark:text-slate-400 text-[8px] font-black uppercase tracking-wider">Today Sale (Gross)</p>
@@ -82,7 +82,8 @@ const Dashboard: React.FC = () => {
             <p className="text-[9px] font-black uppercase tracking-[2px] text-indigo-600 theme-dark:text-indigo-400">Live Table Occupancy</p>
           </div>
           
-          <div className="flex flex-wrap gap-2">
+          {/* Legend - Hidden on Mobile */}
+          <div className="hidden sm:flex flex-wrap gap-2">
             <div className="flex items-center gap-1.5 bg-slate-50 theme-dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 theme-dark:border-slate-700 shadow-sm">
               <div className="w-2 h-2 bg-slate-300 rounded-full"></div>
               <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Available</span>
