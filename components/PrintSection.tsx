@@ -249,8 +249,13 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           )}
 
           {/* Footer Info */}
-          <div className="text-center space-y-1 mt-3">
-            <p className="font-black text-[12px]">{settings.thankYouMessage}</p>
+          <div className="text-center space-y-1 mt-4">
+            <p 
+              className="italic text-[16px] font-bold" 
+              style={{ fontFamily: "'Dancing Script', cursive", textTransform: 'none' }}
+            >
+              {settings.thankYouMessage}
+            </p>
           </div>
           
           <div className="text-center py-8">

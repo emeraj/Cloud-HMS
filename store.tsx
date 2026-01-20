@@ -81,7 +81,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     address: '123 Food Street, Pune',
     phone: '+91 9876543210',
     gstin: '',
-    thankYouMessage: 'Visit Us Again!',
+    thankYouMessage: 'Thanking U Visit Again!',
     printQrCode: true,
     printGstSummary: true,
     showImages: true,
