@@ -490,8 +490,28 @@ const PosView: React.FC<PosViewProps> = ({ onBack, onPrint }) => {
         </div>
       </div>
 
-      <div className="md:hidden fixed bottom-10 right-8 flex flex-col gap-3 z-50">
-        <button onClick={() => setMobileView(mobileView === 'menu' ? 'cart' : 'menu')} className="w-14 h-14 bg-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center relative active:scale-90 transition-transform">{mobileView === 'menu' ? (<><i className="fa-solid fa-cart-shopping text-xl"></i>{cartItems.length > 0 && (<span className="absolute -top-1 -right-1 w-6 h-6 bg-rose-500 text-white text-[12px] font-black rounded-full flex items-center justify-center border-2 border-indigo-600">{cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}</span>)}</>) : (<i className="fa-solid fa-utensils text-xl"></i>)}</button>
+      <div className="md:hidden fixed bottom-12 left-1/2 -translate-x-1/2 z-50">
+        <button 
+          onClick={() => setMobileView(mobileView === 'menu' ? 'cart' : 'menu')} 
+          className="w-20 h-20 bg-indigo-600 text-white rounded-full shadow-[0_15px_30px_rgba(79,70,229,0.4)] border-4 border-white flex flex-col items-center justify-center relative active:scale-95 transition-all duration-300"
+        >
+          {mobileView === 'menu' ? (
+            <>
+              <i className="fa-solid fa-cart-shopping text-3xl mb-0.5"></i>
+              <span className="text-[10px] font-black uppercase tracking-tighter">Cart</span>
+              {cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-8 h-8 bg-rose-500 text-white text-[14px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-md animate-bounce">
+                  {cartItems.reduce((acc, curr) => acc + curr.quantity, 0)}
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <i className="fa-solid fa-utensils text-3xl mb-0.5"></i>
+              <span className="text-[10px] font-black uppercase tracking-tighter">Menu</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
