@@ -6,9 +6,10 @@ import { Order, KOTRecord } from '../types';
 interface ReportsProps {
   onPrint?: (type: 'BILL' | 'KOT', order: Order) => void;
   onPrintDayBook?: (orders: Order[], date: string) => void;
+  onPrintItemSummary?: (items: any[], date: string) => void;
 }
 
-const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
+const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook, onPrintItemSummary }) => {
   const { orders, captains, kots, setActiveTable, tables, upsert, remove } = useApp();
   const [reportType, setReportType] = useState<'DayBook' | 'KOTReport' | 'ItemSummary' | 'CaptainWise'>('DayBook');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -40,7 +41,6 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
         items[item.menuItemId].revenue += item.price * item.quantity;
       });
     });
-    // Updated sorting: now sorting by quantity descending
     const sortedItems = Object.values(items).sort((a, b) => b.quantity - a.quantity);
     return { total, count, topRevenue: sortedItems[0]?.revenue || 0, itemSummary: sortedItems };
   }, [settledOrders]);
@@ -78,12 +78,11 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
   };
 
   const handleReprintKOT = (kot: KOTRecord) => {
-    // Create a complete order structure for the print engine to consume
     const mockOrder: Order = {
       id: kot.orderId,
       dailyBillNo: '',
       tableId: kot.tableId,
-      captainId: '', // Print engine will use captainName if lookup fails
+      captainId: '',
       items: kot.items,
       status: 'Pending',
       timestamp: kot.timestamp,
@@ -95,10 +94,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
       paymentMode: 'Cash',
       cashierName: ''
     };
-    
-    // Attach captain name as a custom property for the printer
     (mockOrder as any).captainName = kot.captainName;
-    
     onPrint?.('KOT', mockOrder);
   };
 
@@ -128,7 +124,7 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
           
           <div className="flex gap-2">
             <button onClick={() => onPrintDayBook?.(settledOrders, selectedDate)} disabled={settledOrders.length === 0} className="bg-emerald-600 hover:bg-emerald-500 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-md flex-1 md:flex-none">
-              <i className="fa-solid fa-print"></i> Print
+              <i className="fa-solid fa-print"></i> Daybook
             </button>
             <button onClick={handleDayClose} disabled={finalizedOrders.length === 0 || isClosing} className="bg-rose-600 hover:bg-rose-500 transition-all text-white px-4 py-2 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase shadow-md flex-1 md:flex-none">
               {isClosing ? <i className="fa-solid fa-spinner animate-spin"></i> : <i className="fa-solid fa-calendar-check"></i>} Day Close
@@ -219,21 +215,35 @@ const Reports: React.FC<ReportsProps> = ({ onPrint, onPrintDayBook }) => {
           )}
 
           {reportType === 'ItemSummary' && (
-            <div className="overflow-x-auto rounded-lg border border-slate-200 theme-dark:border-slate-700">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 theme-dark:bg-slate-900 text-[10px] font-black text-slate-500 uppercase">
-                  <tr><th className="p-3">Dish Name</th><th className="p-3 text-center">Qty Sold</th><th className="p-3 text-right">Revenue</th></tr>
-                </thead>
-                <tbody className="bg-white theme-dark:bg-slate-800 text-[11px]">
-                  {stats.itemSummary.map((item, idx) => (
-                    <tr key={idx} className="border-b border-slate-100 theme-dark:border-slate-700 last:border-0 hover:bg-slate-50">
-                      <td className="p-3 uppercase font-black">{item.name}</td>
-                      <td className="p-3 text-center text-indigo-600 font-black">{item.quantity}</td>
-                      <td className="p-3 text-right text-emerald-600 font-black">₹{item.revenue.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              <div className="flex justify-end px-2">
+                <button 
+                  onClick={() => onPrintItemSummary?.(stats.itemSummary, selectedDate)}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase shadow-md transition-all active:scale-95"
+                >
+                  <i className="fa-solid fa-print"></i> Print Item Sales
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-slate-200 theme-dark:border-slate-700">
+                <table className="w-full text-left">
+                  <thead className="bg-slate-50 theme-dark:bg-slate-900 text-[10px] font-black text-slate-500 uppercase">
+                    <tr><th className="p-3">Dish Name</th><th className="p-3 text-center">Qty Sold</th><th className="p-3 text-right">Revenue</th></tr>
+                  </thead>
+                  <tbody className="bg-white theme-dark:bg-slate-800 text-[11px]">
+                    {stats.itemSummary.length === 0 ? (
+                      <tr><td colSpan={3} className="p-10 text-center text-slate-400 font-bold italic">No items sold on this date</td></tr>
+                    ) : (
+                      stats.itemSummary.map((item, idx) => (
+                        <tr key={idx} className="border-b border-slate-100 theme-dark:border-slate-700 last:border-0 hover:bg-slate-50">
+                          <td className="p-3 uppercase font-black">{item.name}</td>
+                          <td className="p-3 text-center text-indigo-600 font-black">{item.quantity}</td>
+                          <td className="p-3 text-right text-emerald-600 font-black">₹{item.revenue.toFixed(2)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

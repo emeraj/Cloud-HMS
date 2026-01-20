@@ -92,7 +92,13 @@ const Sidebar: React.FC<{ activeView: View; setView: (v: View) => void }> = ({ a
 const MainContent: React.FC = () => {
   const { activeTable, setActiveTable, settings, setSettings, isLoading, user, logout, upsert, isSyncing } = useApp();
   const [activeView, setView] = useState<View>('Dashboard');
-  const [printData, setPrintData] = useState<{ type: 'BILL' | 'KOT' | 'DAYBOOK', order?: Order | null, reportOrders?: Order[], reportDate?: string } | null>(null);
+  const [printData, setPrintData] = useState<{ 
+    type: 'BILL' | 'KOT' | 'DAYBOOK' | 'ITEM_SUMMARY', 
+    order?: Order | null, 
+    reportOrders?: Order[], 
+    itemSummary?: any[],
+    reportDate?: string 
+  } | null>(null);
 
   useEffect(() => {
     if (settings.theme === 'dark') {
@@ -109,6 +115,11 @@ const MainContent: React.FC = () => {
 
   const handlePrintDayBook = (orders: Order[], date: string) => {
     setPrintData({ type: 'DAYBOOK', reportOrders: orders, reportDate: date });
+    setTimeout(() => { window.print(); }, 1500);
+  };
+
+  const handlePrintItemSummary = (items: any[], date: string) => {
+    setPrintData({ type: 'ITEM_SUMMARY', itemSummary: items, reportDate: date });
     setTimeout(() => { window.print(); }, 1500);
   };
 
@@ -155,7 +166,13 @@ const MainContent: React.FC = () => {
             <main className="max-w-7xl mx-auto p-4 md:p-8">
               {activeView === 'Dashboard' && <Dashboard />}
               {activeView === 'Masters' && <Masters />}
-              {activeView === 'Reports' && <Reports onPrint={handlePrint} onPrintDayBook={handlePrintDayBook} />}
+              {activeView === 'Reports' && (
+                <Reports 
+                  onPrint={handlePrint} 
+                  onPrintDayBook={handlePrintDayBook} 
+                  onPrintItemSummary={handlePrintItemSummary}
+                />
+              )}
               {activeView === 'Settings' && (
                 <div className="py-4 animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
                   <div className="bg-[#1e293b] theme-dark:bg-[#111827] rounded-[2.5rem] shadow-2xl p-6 md:p-10 max-w-3xl mx-auto border border-white/5">
@@ -186,6 +203,11 @@ const MainContent: React.FC = () => {
                           <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">GSTIN</label>
                           <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" value={settings.gstin || ''} onChange={e => setSettings({...settings, gstin: e.target.value})} />
                         </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest pl-1">THANK YOU MESSAGE (FOOTER)</label>
+                        <input className="w-full p-4 bg-[#fefce8] border-none rounded-2xl text-slate-900 font-black text-sm outline-none shadow-inner" placeholder="e.g. Thanking U Visit Again!" value={settings.thankYouMessage} onChange={e => setSettings({...settings, thankYouMessage: e.target.value})} />
                       </div>
 
                       <div className="bg-[#111827] theme-dark:bg-[#0b1120] p-6 rounded-[2rem] border border-white/5 space-y-5">
@@ -253,7 +275,13 @@ const MainContent: React.FC = () => {
           </div>
         )}
       </div>
-      <PrintSection order={printData?.order || null} type={printData?.type || 'BILL'} reportOrders={printData?.reportOrders} reportDate={printData?.reportDate} />
+      <PrintSection 
+        order={printData?.order || null} 
+        type={printData?.type || 'BILL'} 
+        reportOrders={printData?.reportOrders} 
+        itemSummary={printData?.itemSummary}
+        reportDate={printData?.reportDate} 
+      />
     </div>
   );
 };

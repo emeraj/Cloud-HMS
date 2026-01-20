@@ -6,13 +6,72 @@ import { Order } from '../types';
 interface PrintSectionProps {
   order: Order | null;
   reportOrders?: Order[];
+  itemSummary?: any[];
   reportDate?: string;
-  type: 'BILL' | 'KOT' | 'DAYBOOK';
+  type: 'BILL' | 'KOT' | 'DAYBOOK' | 'ITEM_SUMMARY';
 }
 
-const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate }) => {
+const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, reportDate, itemSummary }) => {
   const { settings, tables, captains } = useApp();
   
+  if (type === 'ITEM_SUMMARY') {
+    if (!itemSummary) return null;
+    const totalQty = itemSummary.reduce((sum, i) => sum + i.quantity, 0);
+    const totalRev = itemSummary.reduce((sum, i) => sum + i.revenue, 0);
+
+    return (
+      <div id="print-section" className="text-black bg-white font-mono text-[12px] uppercase leading-tight print-view selection:bg-transparent">
+        <div className="flex flex-col items-stretch">
+          <div className="text-center mb-1">
+            <h1 className="text-[16px] font-black tracking-tight mb-1">{settings.name}</h1>
+            <p className="text-[14px] font-black border-y border-black border-dashed py-1.5 my-1.5">ITEM SALES REPORT</p>
+            <p className="text-[10px] font-bold">DATE: {reportDate}</p>
+          </div>
+
+          <div className="border-t border-black border-dashed my-1"></div>
+
+          <table className="w-full text-left text-[10px]">
+            <thead>
+              <tr className="border-b border-black border-dashed">
+                <th className="py-1 font-black w-[55%]">ITEM</th>
+                <th className="py-1 font-black text-center w-[15%]">QTY</th>
+                <th className="py-1 text-right font-black w-[30%]">REV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {itemSummary.map((i, idx) => (
+                <tr key={idx} className="border-b border-black border-dotted">
+                  <td className="py-1.5 leading-tight">{i.name}</td>
+                  <td className="py-1.5 text-center font-bold">{i.quantity}</td>
+                  <td className="py-1.5 text-right font-bold">{i.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div className="border-t border-black border-dashed mt-3 pt-2 font-black text-[12px] space-y-1">
+            <div className="flex justify-between">
+              <span>TOTAL ITEMS SOLD:</span>
+              <span>{totalQty}</span>
+            </div>
+            <div className="flex justify-between text-[14px]">
+              <span>TOTAL REVENUE:</span>
+              <span>₹{totalRev.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="text-center mt-6">
+            <p className="text-[9px] opacity-40 italic">*** END OF REPORT ***</p>
+          </div>
+          <div className="text-center py-6">
+            <br /><br /><br />
+          </div>
+          <div className="h-12"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (type === 'DAYBOOK') {
     if (!reportOrders) return null;
     const total = reportOrders.reduce((sum, o) => sum + o.totalAmount, 0);
@@ -71,7 +130,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
   const table = tables.find(t => t.id === order.tableId);
   const captain = captains.find(w => w.id === order.captainId);
   
-  // Resilient date/time formatting
   let formattedDate = 'N/A';
   let formattedTime = 'N/A';
   try {
@@ -115,7 +173,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     return acc;
   }, {});
 
-  // Safe KOT display number
   const safeKotNo = isNaN(Number(order.kotCount)) ? '??' : order.kotCount;
   const safeCaptainName = captain?.name || (order as any).captainName || 'N/A';
 
@@ -123,7 +180,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
     <div id="print-section" className="text-black bg-white font-mono text-[12px] uppercase leading-tight print-view selection:bg-transparent">
       {type === 'BILL' ? (
         <div className="flex flex-col items-stretch">
-          {/* Restaurant Details Header */}
           <div className="text-center mb-1">
             <h1 className="text-[18px] font-black tracking-tight mb-1">{settings.name}</h1>
             <p className="text-[10px] whitespace-pre-line leading-normal px-2">{settings.address}</p>
@@ -132,7 +188,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             {!isEstimate && settings.gstin && <p className="text-[10px] font-bold">GSTIN: {settings.gstin}</p>}
           </div>
 
-          {/* Simple Clean Header */}
           <div className="border-t border-black border-dashed mt-2 mb-1"></div>
           <div className="text-center py-1">
             <span className="text-[14px] font-black inline-block">
@@ -141,7 +196,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           </div>
           <div className="border-b border-black border-dashed mb-2 pb-1"></div>
 
-          {/* Bill Info */}
           <div className="space-y-1 mb-2 px-0.5 text-[11px]">
             <div className="flex justify-between">
               <span className="font-bold">{isEstimate ? 'EST' : 'BILL'} NO: {isEstimate ? 'EST-' : 'INV-'}{order.dailyBillNo || order.id.slice(-5)}</span>
@@ -163,7 +217,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Items Table */}
           <table className="w-full text-left mb-2">
             <thead>
               <tr className="border-b border-black border-dashed">
@@ -187,7 +240,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
 
           <div className="border-t border-black border-dashed mb-1"></div>
 
-          {/* Totals Section */}
           <div className="space-y-1 mb-1 px-1 text-[11px]">
             <div className="flex justify-between">
               <span>SUBTOTAL:</span>
@@ -206,7 +258,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             <span className="text-[22px] font-black">₹{order.totalAmount.toFixed(2)}</span>
           </div>
 
-          {/* Optional GST Summary */}
           {!isEstimate && settings.printGstSummary && Object.keys(gstBreakdown).length > 0 && (
             <div className="mb-3">
               <div className="text-center font-black text-[10px] mb-1">GST TAX SUMMARY</div>
@@ -233,7 +284,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {/* UPI QR Code */}
           {settings.printQrCode && qrCodeImg && (
             <div className="text-center mb-4 mt-2">
               <p className="text-[10px] font-black mb-1.5 tracking-widest uppercase">SCAN TO PAY (UPI)</p>
@@ -248,7 +298,6 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
             </div>
           )}
 
-          {/* Footer Info */}
           <div className="text-center space-y-1 mt-4">
             <p 
               className="italic text-[16px] font-bold" 
@@ -264,13 +313,11 @@ const PrintSection: React.FC<PrintSectionProps> = ({ order, type, reportOrders, 
           <div className="h-12"></div>
         </div>
       ) : (
-        /* KOT Template - Refined for clarity and thermal printing */
         <div className="text-center flex flex-col items-stretch">
           <div className="border-b-2 border-black border-dashed pb-2 mb-2">
             <h1 className="text-[12px] font-black tracking-[0.2em] mb-1">KITCHEN ORDER TICKET</h1>
             <div className="flex justify-between items-center px-1">
                <h2 className="text-[20px] font-black">KOT #{safeKotNo}</h2>
-               {/* Plain Table Number Display */}
                <div className="text-[22px] font-black">TBL: {table?.number || 'N/A'}</div>
             </div>
           </div>
